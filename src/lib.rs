@@ -1,74 +1,59 @@
+mod byte_conv;
+
+use std::fmt::Debug;
+
+use enum_dispatch::enum_dispatch;
+
+pub type AsmLine = u16;
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct InstrImm {
-    pub reg:i16,
-    pub imm:i16,
+    pub dr: u8,
+    pub reg: u8,
+    pub imm: i16,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct InstrReg {
-    pub reg1:i16,
-    pub reg2:i16,
+    pub dr: u8,
+    pub reg1: u8,
+    pub reg2: u8,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum IAdd {
     Reg(InstrReg),
     Imm(InstrImm),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum IAnd {
     Reg(InstrReg),
     Imm(InstrImm),
 }
 
+/// Some LC-3 instruction.
+#[enum_dispatch]
+pub trait Instruction: TryFrom<AsmLine> + Into<AsmLine> {
+    fn execute(self);
+}
 
-pub trait Instruction {
-    type Output;
-
-    fn execute(self) -> Self::Output;
+/// Enum with all [`Instruction`] implementors.
+#[enum_dispatch(Instruction)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum InstEnum {
+    IAdd,
+    IAnd,
 }
 
 impl Instruction for IAdd {
-    type Output = i16;
-    fn execute(self) -> Self::Output {
-        match self {
-            Self::Reg(InstrReg{reg1, reg2}) => reg1 + reg2,
-            Self::Imm(InstrImm{reg, imm}) => reg + imm,
-        }
+    fn execute(self) {
+        unimplemented!()
     }
 }
 
 impl Instruction for IAnd {
-    type Output = i16;
-    fn execute(self) -> Self::Output {
-        match self {
-            Self::Reg(InstrReg{reg1, reg2}) => reg1 & reg2,
-            Self::Imm(InstrImm{reg, imm}) => reg & imm,
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_add_imm() {
-        let test_instr = IAdd::Imm(InstrImm{reg:10, imm:5});
-        assert_eq!(test_instr.execute(), 15)
-    }
-
-    #[test]
-    fn test_add_reg() {
-        let test_instr = IAdd::Reg(InstrReg{reg1:10, reg2:5});
-        assert_eq!(test_instr.execute(), 15)
-    }
-
-    #[test]
-    fn test_and_imm() {
-        let test_instr = IAnd::Imm(InstrImm{reg:0b1001, imm: 0b0110});
-        assert_eq!(test_instr.execute(), 0b0000)
-    }
-
-    #[test]
-    fn test_and_reg() {
-        let test_instr = IAnd::Reg(InstrReg{reg:0b1001, imm:0b1001});
+    fn execute(self) {
+        unimplemented!()
     }
 }
