@@ -70,6 +70,19 @@ pub enum IInterruptReturn {
     Instr(InstrOffset6), //treated as an offset6 with an offset of 0
 }
 
+pub enum ILoad {
+    Std(InstrPCOffset9),      //LD
+    Indirect(InstrPCOffset9), //LDI
+    Reg(InstrOffset6),        //LDR
+    Addr(InstrPCOffset9),     //LEA
+}
+
+pub enum IStore {
+    Std(InstrPCOffset9),      //ST
+    Indirect(InstrPCOffset9), //STI
+    Reg(InstrOffset6),        //STR
+}
+
 impl Instruction for IAdd {
     fn execute(self, processor: &mut LC3) {
         let dest;
@@ -232,5 +245,75 @@ impl Instruction for IJumpSubRoutine {
             }
         };
         processor.pc = jump_addr;
+    }
+}
+
+impl Instruction for ISubRoutineReturn {
+    fn execute(self, processor: &mut LC3) {
+        todo!();
+    }
+}
+
+impl Instruction for IInterruptReturn {
+    fn execute(self, processor: &mut LC3) {
+        todo!();
+    }
+}
+
+impl Instruction for ILoad {
+    fn execute(self, processor: &mut LC3) {
+        match self {
+            Self::Std(InstrPCOffset9 {
+                target_reg,
+                pc_offset,
+            }) => {
+                todo!()
+            }
+            Self::Indirect(InstrPCOffset9 {
+                target_reg,
+                pc_offset,
+            }) => {
+                todo!()
+            }
+            Self::Reg(InstrOffset6 {
+                target_reg,
+                base_reg,
+                offset,
+            }) => {
+                todo!()
+            }
+            Self::Addr(InstrPCOffset9 {
+                target_reg,
+                pc_offset,
+            }) => {
+                todo!()
+            }
+        }
+    }
+}
+
+impl Instruction for IStore {
+    fn execute(self, processor: &mut LC3) {
+        match self {
+            Self::Std(InstrPCOffset9 {
+                target_reg,
+                pc_offset,
+            }) => {
+                todo!()
+            }
+            Self::Indirect(InstrPCOffset9 {
+                target_reg,
+                pc_offset,
+            }) => {
+                todo!()
+            }
+            Self::Reg(InstrOffset6 {
+                target_reg,
+                base_reg,
+                offset,
+            }) => {
+                todo!()
+            }
+        }
     }
 }
