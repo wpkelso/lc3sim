@@ -29,6 +29,7 @@ pub struct LC3 {
 
 #[cfg(test)]
 mod test {
+
     use super::instruction::*;
     use super::*;
 
@@ -346,5 +347,59 @@ mod test {
         test_instr.execute(&mut processor);
         assert_eq!(processor.pc, 0x000A);
         assert_eq!(processor.regs[7], 0x3000);
+    }
+
+    #[test]
+    fn intr_ld() {
+        let mut processor: LC3 = LC3 {
+            mem: Box::new([0; ADDR_SPACE_SIZE]),
+            conds: ConditionReg {
+                negative: false,
+                zero: false,
+                positive: false,
+            },
+            regs: Box::new([
+                0x000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+            ]),
+            pc: 0x3000,
+        };
+        let test_instr: ILoad = ILoad::Std(InstrPCOffset9 {
+            target_reg: 0,
+            pc_offset: 0x0005,
+        });
+
+        //LD
+        processor.mem[0x3006] = 0xFF14;
+        test_instr.execute(&mut processor);
+        assert_eq!(processor.regs[0], 0xFF14);
+
+        // LDI
+        processor.mem[0x3003] = 0x3004;
+        processor.mem[0x3004] = 0xFF14;
+        let test_instr: ILoad = ILoad::Indirect(InstrPCOffset9 {
+            target_reg: 1,
+            pc_offset: 0x0002,
+        });
+        test_instr.execute(&mut processor);
+        assert_eq!(processor.regs[1], 0xFF14);
+
+        // LDR
+        processor.mem[0x300A] = 0xFF14;
+        processor.regs[2] = 0x3009;
+        let test_instr: ILoad = ILoad::Reg(InstrOffset6 {
+            target_reg: 3,
+            base_reg: 2,
+            offset: 0x0001,
+        });
+        test_instr.execute(&mut processor);
+        assert_eq!(processor.regs[3], 0xFF14);
+
+        // LEA
+        let test_instr: ILoad = ILoad::Addr(InstrPCOffset9 {
+            target_reg: 4,
+            pc_offset: 0x000E,
+        });
+        test_instr.execute(&mut processor);
+        assert_eq!(processor.regs[4], 0x300F);
     }
 }

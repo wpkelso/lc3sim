@@ -267,26 +267,31 @@ impl Instruction for ILoad {
                 target_reg,
                 pc_offset,
             }) => {
-                todo!()
+                let target_addr: u16 = processor.pc + 1 + pc_offset;
+                processor.regs[target_reg as usize] = processor.mem[target_addr as usize];
             }
             Self::Indirect(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
             }) => {
-                todo!()
+                let target_addr: u16 = processor.pc + 1 + pc_offset;
+                let target_loc: u16 = processor.mem[target_addr as usize];
+                processor.regs[target_reg as usize] = processor.mem[target_loc as usize];
             }
             Self::Reg(InstrOffset6 {
                 target_reg,
                 base_reg,
                 offset,
             }) => {
-                todo!()
+                let target_addr: u16 = processor.regs[base_reg as usize] + offset as u16;
+                processor.regs[target_reg as usize] = processor.mem[target_addr as usize];
             }
             Self::Addr(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
             }) => {
-                todo!()
+                let target_addr = processor.pc + 1 + pc_offset;
+                processor.regs[target_reg as usize] = target_addr;
             }
         }
     }
