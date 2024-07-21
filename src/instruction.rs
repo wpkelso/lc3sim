@@ -1,4 +1,5 @@
 use crate::*;
+//TODO: TRAP instructions
 
 pub trait Instruction {
     fn execute(self, processor: &mut LC3);
@@ -54,20 +55,13 @@ pub struct IBranch {
 
 pub enum IJump {
     Instr(InstrOffset6), //not strictly an offset6, but doesn't matter here
+    Ret, //RET and RETI are included here, as they are functionally special cases of JMP
+    InterRet,
 }
 
 pub enum IJumpSubRoutine {
     Offset(InstrPCOffset11), //JSR
     Reg(InstrOffset6),       //JSRR treated as an offset6 with an offset of 0
-}
-
-pub enum ISubRoutineReturn {
-    Instr(InstrOffset6), //this could be hardcoded, but it's clearer to follow the machine code
-                         //convention
-}
-
-pub enum IInterruptReturn {
-    Instr(InstrOffset6), //treated as an offset6 with an offset of 0
 }
 
 pub enum ILoad {
@@ -106,6 +100,7 @@ impl Instruction for IAdd {
         };
         processor.regs[dest as usize] = result;
 
+        //setting condition codes
         if (result as i16) > 0 {
             processor.conds = ConditionReg {
                 positive: true,
@@ -151,6 +146,7 @@ impl Instruction for IAnd {
         };
         processor.regs[dest as usize] = result;
 
+        //setting condition codes
         if (result as i16) > 0 {
             processor.conds = ConditionReg {
                 positive: true,
@@ -185,6 +181,8 @@ impl Instruction for INot {
             }
         };
         processor.regs[dest as usize] = result;
+
+        //setting condition codes
         if (result as i16) > 0 {
             processor.conds = ConditionReg {
                 positive: true,
@@ -225,6 +223,12 @@ impl Instruction for IJump {
             Self::Instr(InstrOffset6 { base_reg, .. }) => {
                 dest = base_reg;
             }
+            Self::Ret => {
+                dest = 7;
+            }
+            Self::InterRet => {
+                unimplemented!();
+            }
         }
         processor.pc = processor.regs[dest as usize];
     }
@@ -232,7 +236,7 @@ impl Instruction for IJump {
 
 impl Instruction for IJumpSubRoutine {
     fn execute(self, processor: &mut LC3) {
-        processor.regs[7] = processor.pc;
+        processor.regs[7] = processor.pc; //save return address
         let jump_addr: u16;
         match self {
             Self::Offset(InstrPCOffset11 { pc_offset }) => {
@@ -248,27 +252,17 @@ impl Instruction for IJumpSubRoutine {
     }
 }
 
-impl Instruction for ISubRoutineReturn {
-    fn execute(self, processor: &mut LC3) {
-        todo!();
-    }
-}
-
-impl Instruction for IInterruptReturn {
-    fn execute(self, processor: &mut LC3) {
-        todo!();
-    }
-}
-
 impl Instruction for ILoad {
     fn execute(self, processor: &mut LC3) {
+        let result;
         match self {
             Self::Std(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
             }) => {
                 let target_addr: u16 = processor.pc + 1 + pc_offset;
-                processor.regs[target_reg as usize] = processor.mem[target_addr as usize];
+                result = processor.mem[target_addr as usize];
+                processor.regs[target_reg as usize] = result;
             }
             Self::Indirect(InstrPCOffset9 {
                 target_reg,
@@ -276,7 +270,8 @@ impl Instruction for ILoad {
             }) => {
                 let target_addr: u16 = processor.pc + 1 + pc_offset;
                 let target_loc: u16 = processor.mem[target_addr as usize];
-                processor.regs[target_reg as usize] = processor.mem[target_loc as usize];
+                result = processor.mem[target_loc as usize];
+                processor.regs[target_reg as usize] = result;
             }
             Self::Reg(InstrOffset6 {
                 target_reg,
@@ -284,15 +279,37 @@ impl Instruction for ILoad {
                 offset,
             }) => {
                 let target_addr: u16 = processor.regs[base_reg as usize] + offset as u16;
-                processor.regs[target_reg as usize] = processor.mem[target_addr as usize];
+                result = processor.mem[target_addr as usize];
+                processor.regs[target_reg as usize] = result;
             }
             Self::Addr(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
             }) => {
-                let target_addr = processor.pc + 1 + pc_offset;
-                processor.regs[target_reg as usize] = target_addr;
+                result = processor.pc + 1 + pc_offset;
+                processor.regs[target_reg as usize] = result;
             }
+        }
+
+        //setting condition codes
+        if (result as i16) > 0 {
+            processor.conds = ConditionReg {
+                positive: true,
+                zero: false,
+                negative: false,
+            };
+        } else if (result as i16) < 0 {
+            processor.conds = ConditionReg {
+                positive: false,
+                zero: false,
+                negative: true,
+            };
+        } else {
+            processor.conds = ConditionReg {
+                positive: false,
+                zero: true,
+                negative: false,
+            };
         }
     }
 }
@@ -304,20 +321,24 @@ impl Instruction for IStore {
                 target_reg,
                 pc_offset,
             }) => {
-                todo!()
+                let target_addr: u16 = processor.pc + 1 + pc_offset;
+                processor.mem[target_addr as usize] = processor.regs[target_reg as usize];
             }
             Self::Indirect(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
             }) => {
-                todo!()
+                let calc_addr: u16 = processor.pc + 1 + pc_offset;
+                let target_addr: u16 = processor.mem[calc_addr as usize];
+                processor.mem[target_addr as usize] = processor.regs[target_reg as usize];
             }
             Self::Reg(InstrOffset6 {
                 target_reg,
                 base_reg,
                 offset,
             }) => {
-                todo!()
+                let target_addr: u16 = processor.regs[base_reg as usize] + offset;
+                processor.mem[target_addr as usize] = processor.regs[target_reg as usize];
             }
         }
     }

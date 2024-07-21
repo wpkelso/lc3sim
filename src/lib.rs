@@ -313,6 +313,11 @@ mod test {
             assert_eq!(processor.pc, processor.regs[i as usize]);
             i += 1;
         }
+
+        processor.regs[7] = 0x3000;
+        let test_instr: IJump = IJump::Ret;
+        test_instr.execute(&mut processor);
+        assert_eq!(processor.pc, 0x3000);
     }
 
     #[test]
@@ -330,6 +335,7 @@ mod test {
             pc: 0x3000,
         };
 
+        // JSR
         let test_instr = IJumpSubRoutine::Offset(InstrPCOffset11 { pc_offset: 0x0006 });
         test_instr.execute(&mut processor);
         assert_eq!(processor.pc, 0x3006);
@@ -339,6 +345,7 @@ mod test {
         processor.regs[1] = 0x000A;
         processor.regs[7] = 0x0000;
 
+        // JSRR
         let test_instr = IJumpSubRoutine::Reg(InstrOffset6 {
             target_reg: 0, //unused
             base_reg: 1,
@@ -350,7 +357,7 @@ mod test {
     }
 
     #[test]
-    fn intr_ld() {
+    fn instr_ld() {
         let mut processor: LC3 = LC3 {
             mem: Box::new([0; ADDR_SPACE_SIZE]),
             conds: ConditionReg {
@@ -359,7 +366,7 @@ mod test {
                 positive: false,
             },
             regs: Box::new([
-                0x000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+                0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
             pc: 0x3000,
         };
@@ -401,5 +408,48 @@ mod test {
         });
         test_instr.execute(&mut processor);
         assert_eq!(processor.regs[4], 0x300F);
+    }
+
+    #[test]
+    fn instr_st() {
+        let mut processor: LC3 = LC3 {
+            mem: Box::new([0; ADDR_SPACE_SIZE]),
+            conds: ConditionReg {
+                negative: false,
+                zero: false,
+                positive: false,
+            },
+            regs: Box::new([
+                0xFF14, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+            ]),
+            pc: 0x3000,
+        };
+
+        // ST
+        let test_instr: IStore = IStore::Std(InstrPCOffset9 {
+            target_reg: 0,
+            pc_offset: 0x0004,
+        });
+        test_instr.execute(&mut processor);
+        assert_eq!(processor.mem[0x3005], 0xFF14);
+
+        // STI
+        processor.mem[0x3003] = 0x300A;
+        let test_instr: IStore = IStore::Indirect(InstrPCOffset9 {
+            target_reg: 0,
+            pc_offset: 0x0002,
+        });
+        test_instr.execute(&mut processor);
+        assert_eq!(processor.mem[0x300A], 0xFF14);
+
+        // STR
+        processor.regs[1] = 0x3003;
+        let test_instr: IStore = IStore::Reg(InstrOffset6 {
+            target_reg: 0,
+            base_reg: 1,
+            offset: 0x0003,
+        });
+        test_instr.execute(&mut processor);
+        assert_eq!(processor.mem[0x3006], 0xFF14);
     }
 }
