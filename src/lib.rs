@@ -24,12 +24,11 @@ pub struct LC3 {
     pub mem: Box<[LC3Word; ADDR_SPACE_SIZE]>,
     pub conds: ConditionReg,
     pub regs: Box<[LC3Word; NUM_REGS]>,
-    pub pc: LC3MemAddr, //program counter should be initialized on startup
+    pub pc: LC3MemAddr,
 }
 
 #[cfg(test)]
 mod test {
-
     use super::instruction::*;
     use super::*;
 
