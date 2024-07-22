@@ -5,47 +5,56 @@ pub trait Instruction {
     fn execute(self, processor: &mut LC3);
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct InstrRegImm {
     pub dest_reg: u8,
     pub src_reg: u8,
     pub imm: u16,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct InstrRegReg {
     pub dest_reg: u8,
     pub src_reg_1: u8,
     pub src_reg_2: u8,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct InstrOffset6 {
     pub target_reg: u8,
     pub base_reg: u8,
     pub offset: u16,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct InstrPCOffset9 {
     pub target_reg: u8,
     pub pc_offset: u16,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct InstrPCOffset11 {
     pub pc_offset: u16,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum IAdd {
     Reg(InstrRegReg),
     Imm(InstrRegImm),
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum IAnd {
     Reg(InstrRegReg),
     Imm(InstrRegImm),
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum INot {
     Instr(InstrRegImm), //not actually a RegImm, just used for implementation
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct IBranch {
     //while br roughly follows the bit assignment of PCoffset9,
     //this is treated as a special case for ease of implementation
@@ -53,17 +62,20 @@ pub struct IBranch {
     pub pc_offset: u16,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum IJump {
     Instr(InstrOffset6), //not strictly an offset6, but doesn't matter here
     Ret, //RET and RETI are included here, as they are functionally special cases of JMP
     InterRet,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum IJumpSubRoutine {
     Offset(InstrPCOffset11), //JSR
     Reg(InstrOffset6),       //JSRR treated as an offset6 with an offset of 0
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum ILoad {
     Std(InstrPCOffset9),      //LD
     Indirect(InstrPCOffset9), //LDI
@@ -71,6 +83,7 @@ pub enum ILoad {
     Addr(InstrPCOffset9),     //LEA
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum IStore {
     Std(InstrPCOffset9),      //ST
     Indirect(InstrPCOffset9), //STI

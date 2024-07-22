@@ -14,12 +14,14 @@ const DEV_REG_ADDR: LC3Word = 0xFE00; //first address of the device register add
 
 const NUM_REGS: usize = 8_usize; //number of registers in the LC3 spec
 
+#[derive(Debug, Clone, Copy)]
 pub struct ConditionReg {
     pub negative: bool,
     pub zero: bool,
     pub positive: bool,
 }
 
+#[derive(Debug, Clone)]
 pub struct LC3 {
     pub mem: Box<[LC3Word; ADDR_SPACE_SIZE]>,
     pub conds: ConditionReg,
