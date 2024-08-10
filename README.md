@@ -11,10 +11,10 @@ _A Rust-based simulator and interface for the LC3 micro-architecture_
 ---
 
 ## Implementation Status:
-+ Compiler: 0%
-+ Machine Code Parser: 0%
-+ Microarchitecture: 50%
-+ Instruction Set Architecture: 90%
++ Assembler: 1%
++ Parser: 0%
++ Microarchitecture: 99%
++ Instruction Set Architecture: 99%
 + Operating System: 0%
 + Command Line User Interface: 0%
 + Graphical User Interface: 0%
