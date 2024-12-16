@@ -192,18 +192,13 @@ impl Instruction for IBranch {
 
 impl Instruction for IJump {
     fn execute<P: LC3>(self, processor: &mut P) {
-        let dest;
-        match self {
-            Self::Instr(InstrOffset6 { base_reg, .. }) => {
-                dest = base_reg;
-            }
-            Self::Ret => {
-                dest = RegAddr::Seven;
-            }
+        let dest = match self {
+            Self::Instr(InstrOffset6 { base_reg, .. }) => base_reg,
+            Self::Ret => RegAddr::Seven,
             Self::InterRet => {
-                unimplemented!();
+                unimplemented!()
             }
-        }
+        };
         processor.set_pc(processor.reg(dest));
     }
 }
@@ -211,15 +206,14 @@ impl Instruction for IJump {
 impl Instruction for IJumpSubRoutine {
     fn execute<P: LC3>(self, processor: &mut P) {
         processor.set_reg(RegAddr::Seven, processor.pc()); //save return address
-        let jump_addr: u16;
-        match self {
+        let jump_addr = match self {
             Self::Offset(InstrPCOffset11 { pc_offset }) => {
                 //JSR
-                jump_addr = processor.pc() + pc_offset;
+                processor.pc() + pc_offset
             }
             Self::Reg(InstrOffset6 { base_reg, .. }) => {
                 //JSRR
-                jump_addr = processor.reg(base_reg);
+                processor.reg(base_reg)
             }
         };
         processor.set_pc(jump_addr);
