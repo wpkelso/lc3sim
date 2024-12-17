@@ -14,4 +14,5 @@ name = "lc3sim"
 path = "src/cli.rs"
 
 [dependencies]
+thiserror = "2"
 
