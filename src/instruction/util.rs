@@ -15,8 +15,8 @@ pub fn set_condition_codes<P: LC3>(processor: &mut P, result: LC3Word) {
 /// Parses the opcode from a word.
 #[inline]
 pub const fn get_opcode(word: LC3Word) -> u8 {
-    // Opcode is always the top byte
-    word.to_be_bytes()[0]
+    // Opcode is always the top half byte
+    word.to_be_bytes()[0] >> 4
 }
 
 /// Extracts a range of bits from a word.
