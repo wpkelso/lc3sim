@@ -14,5 +14,6 @@ name = "lc3sim"
 path = "src/cli.rs"
 
 [dependencies]
+enum_dispatch = "0.3.13"
 thiserror = "2"
 
