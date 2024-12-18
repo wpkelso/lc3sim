@@ -13,10 +13,10 @@ pub enum IStore {
     Indirect(InstrPCOffset9), //STI
     Reg(InstrOffset6),        //STR
 }
-const ST_OPCODE: u8 = 0b0011;
-const STI_OPCODE: u8 = 0b1011;
-const STR_OPCODE: u8 = 0b0111;
-const ALL_STORE_OPCODES: [u8; 3] = [ST_OPCODE, STI_OPCODE, STR_OPCODE];
+pub const ST_OPCODE: u8 = 0b0011;
+pub const STI_OPCODE: u8 = 0b1011;
+pub const STR_OPCODE: u8 = 0b0111;
+pub const ALL_STORE_OPCODES: [u8; 3] = [ST_OPCODE, STI_OPCODE, STR_OPCODE];
 
 impl Instruction for IStore {
     fn execute<P: LC3>(self, processor: &mut P) {

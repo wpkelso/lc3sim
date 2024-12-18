@@ -12,7 +12,7 @@ pub enum IAnd {
     Reg(InstrRegReg),
     Imm(InstrRegImm),
 }
-const AND_OPCODE: u8 = 0b0101;
+pub const AND_OPCODE: u8 = 0b0101;
 
 impl Instruction for IAnd {
     fn execute<P: LC3>(self, processor: &mut P) {

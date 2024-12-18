@@ -6,7 +6,7 @@ use crate::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct INot(pub InstrRegOnly);
-const NOT_OPCODE: u8 = 0b1001;
+pub const NOT_OPCODE: u8 = 0b1001;
 
 impl Instruction for INot {
     fn execute<P: LC3>(self, processor: &mut P) {

@@ -11,7 +11,7 @@ pub struct IBranch {
     pub cond_codes: ConditionCodes,
     pub pc_offset: u16,
 }
-const BRANCH_OPCODE: u8 = 0b0000;
+pub const BRANCH_OPCODE: u8 = 0b0000;
 
 impl Instruction for IBranch {
     fn execute<P: LC3>(self, processor: &mut P) {

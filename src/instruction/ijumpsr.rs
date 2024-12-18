@@ -9,7 +9,7 @@ pub enum IJumpSubRoutine {
     Offset(InstrPCOffset11), //JSR
     Reg(RegAddr),            //JSRR treated as an offset6 with an offset of 0
 }
-const JSR_OPCODE: u8 = 0b0100;
+pub const JSR_OPCODE: u8 = 0b0100;
 
 impl Instruction for IJumpSubRoutine {
     fn execute<P: LC3>(self, processor: &mut P) {

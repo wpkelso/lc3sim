@@ -12,7 +12,7 @@ pub enum IAdd {
     Reg(InstrRegReg),
     Imm(InstrRegImm),
 }
-const ADD_OPCODE: u8 = 0b0001;
+pub const ADD_OPCODE: u8 = 0b0001;
 
 impl Instruction for IAdd {
     fn execute<P: LC3>(self, processor: &mut P) {

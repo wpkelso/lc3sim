@@ -12,7 +12,7 @@ pub enum Trap {
     In,   // 0x23
     Halt, // 0x24
 }
-const TRAP_OPCODE: u8 = 0b1111;
+pub const TRAP_OPCODE: u8 = 0b1111;
 
 impl Instruction for Trap {
     fn execute<P: LC3>(self, processor: &mut P) {

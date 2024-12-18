@@ -14,11 +14,11 @@ pub enum ILoad {
     Reg(InstrOffset6),        //LDR
     Addr(InstrPCOffset9),     //LEA
 }
-const LD_OPCODE: u8 = 0b0010;
-const LDI_OPCODE: u8 = 0b1010;
-const LDR_OPCODE: u8 = 0b0110;
-const LEA_OPCODE: u8 = 0b1110;
-const ALL_LOAD_OPCODES: [u8; 4] = [LD_OPCODE, LDI_OPCODE, LDR_OPCODE, LEA_OPCODE];
+pub const LD_OPCODE: u8 = 0b0010;
+pub const LDI_OPCODE: u8 = 0b1010;
+pub const LDR_OPCODE: u8 = 0b0110;
+pub const LEA_OPCODE: u8 = 0b1110;
+pub const ALL_LOAD_OPCODES: [u8; 4] = [LD_OPCODE, LDI_OPCODE, LDR_OPCODE, LEA_OPCODE];
 
 impl Instruction for ILoad {
     fn execute<P: LC3>(self, processor: &mut P) {
