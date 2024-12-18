@@ -1,14 +1,11 @@
 use crate::{
     defs::{LC3Word, RegAddr},
     executors::LC3,
-    instruction::{
-        args::{InstrRegImm, InstrRegOnly, InstrRegReg},
-        get_bit, get_bits, get_opcode, set_condition_codes, Instruction,
-    },
+    instruction::{args::InstrRegOnly, get_bits, get_opcode, set_condition_codes, Instruction},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct INot(InstrRegOnly);
+pub struct INot(pub InstrRegOnly);
 const NOT_OPCODE: u8 = 0b1001;
 
 impl Instruction for INot {

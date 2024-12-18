@@ -1,11 +1,12 @@
 //TODO: TRAP instructions
 
 use crate::{
-    defs::{LC3Word, RegAddr, SignedLC3Word},
+    defs::{LC3Word, SignedLC3Word},
     executors::LC3,
 };
 
 mod args;
+pub use args::*;
 
 mod iadd;
 pub use iadd::IAdd;

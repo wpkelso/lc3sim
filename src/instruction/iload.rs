@@ -2,11 +2,8 @@ use crate::{
     defs::{LC3Word, RegAddr},
     executors::LC3,
     instruction::{
-        args::{
-            ConditionCodes, InstrOffset6, InstrPCOffset11, InstrPCOffset9, InstrRegImm,
-            InstrRegOnly, InstrRegReg,
-        },
-        get_bit, get_bits, get_opcode, set_condition_codes, Instruction,
+        args::{InstrOffset6, InstrPCOffset9},
+        get_bits, get_opcode, set_condition_codes, Instruction,
     },
 };
 

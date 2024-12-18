@@ -1,13 +1,7 @@
 use crate::{
-    defs::{LC3Word, RegAddr},
+    defs::LC3Word,
     executors::LC3,
-    instruction::{
-        args::{
-            ConditionCodes, InstrOffset6, InstrPCOffset11, InstrPCOffset9, InstrRegImm,
-            InstrRegOnly, InstrRegReg,
-        },
-        get_bit, get_bits, get_opcode, set_condition_codes, Instruction,
-    },
+    instruction::{get_bits, get_opcode, Instruction},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

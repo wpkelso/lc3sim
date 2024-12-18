@@ -291,10 +291,9 @@ mod test {
             pc: 0x0000,
         };
 
-        let test_instr = INot::Instr(InstrRegImm {
+        let test_instr = INot(InstrRegOnly {
             dest_reg: const { RegAddr::panic_from_u8(1) },
             src_reg: const { RegAddr::panic_from_u8(0) },
-            imm: 0,
         });
         test_instr.execute(&mut processor);
         assert_eq!(processor.regs[1], 0b1111111100000000);
@@ -450,11 +449,7 @@ mod test {
         };
 
         for i in 0..8 {
-            let test_instr = IJump::Instr(InstrOffset6 {
-                base_reg: RegAddr::try_from(i).unwrap(),
-                target_reg: const { RegAddr::panic_from_u8(0) }, //unused
-                offset: 0,                                       //unused
-            });
+            let test_instr = IJump::Instr(RegAddr::Zero);
             test_instr.execute(&mut processor);
             assert_eq!(processor.pc, processor.regs[i as usize]);
         }
@@ -491,11 +486,7 @@ mod test {
         processor.regs[7] = 0x0000;
 
         // JSRR
-        let test_instr = IJumpSubRoutine::Reg(InstrOffset6 {
-            target_reg: const { RegAddr::panic_from_u8(0) }, //unused
-            base_reg: const { RegAddr::panic_from_u8(1) },
-            offset: 0, //unused
-        });
+        let test_instr = IJumpSubRoutine::Reg(RegAddr::One);
         test_instr.execute(&mut processor);
         assert_eq!(processor.pc, 0x000A);
         assert_eq!(processor.regs[7], 0x3000);
