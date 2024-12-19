@@ -83,7 +83,7 @@ mod tests {
     fn reject_invalid_parses() {
         // Only invalid state (with right opcode): bit 5 is unset but bits
         // 4 or 3 are set.
-        let invalid_parses = (0..0b0001_1111_1111_1111)
+        let invalid_parses = (BASE_OPCODE..BASE_OPCODE * 2)
             .filter(|word| (word & BITMASK_5) == 0)
             .filter(|word| (word & BITMASK_4_3) != 0);
 
@@ -95,8 +95,7 @@ mod tests {
     #[test]
     fn reject_invalid_opcodes() {
         // All other opcodes
-        let invalid_opcodes =
-            (0..0b0001_1111_1111_1111).filter(|word| (word >> 12) != ADD_OPCODE as u16);
+        let invalid_opcodes = (0..LC3Word::MAX).filter(|word| (word >> 12) != ADD_OPCODE as u16);
 
         for invalid in invalid_opcodes {
             assert!(IAdd::parse(invalid).is_none())
