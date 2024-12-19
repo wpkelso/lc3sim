@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["CoreLC3","CoreLC3SparseIter"]};

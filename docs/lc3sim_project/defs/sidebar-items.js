@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ADDR_SPACE_SIZE","DEV_REG_ADDR","IR_VEC_TBL","NUM_REGS","OS_SUPER_STACK","TRAP_VEC_TBL","USER_SPACE"],"enum":["RegAddr"],"struct":["InvalidRegAddr"],"type":["LC3MemAddr","LC3Word","SignedLC3Word"]};
