@@ -15,4 +15,3 @@ path = "src/cli.rs"
 
 [dependencies]
 thiserror = "2"
-
