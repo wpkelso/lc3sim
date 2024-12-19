@@ -96,3 +96,9 @@ impl Instruction for InstructionEnum {
         }
     }
 }
+
+#[cfg(test)]
+/// Utility value for calculating instruction range.
+///
+/// Bottom opcode bit set.
+const TWELVE_SET: u16 = 1 << 12;

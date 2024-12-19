@@ -71,6 +71,8 @@ impl Instruction for IAdd {
 
 #[cfg(test)]
 mod tests {
+    use crate::instruction::TWELVE_SET;
+
     use super::*;
 
     const BITMASK_5: u16 = 1 << 5;
@@ -83,7 +85,7 @@ mod tests {
     fn reject_invalid_parses() {
         // Only invalid state (with right opcode): bit 5 is unset but bits
         // 4 or 3 are set.
-        let invalid_parses = (BASE_OPCODE..BASE_OPCODE * 2)
+        let invalid_parses = (BASE_OPCODE..(BASE_OPCODE + TWELVE_SET))
             .filter(|word| (word & BITMASK_5) == 0)
             .filter(|word| (word & BITMASK_4_3) != 0);
 
