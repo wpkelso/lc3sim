@@ -449,7 +449,7 @@ mod test {
         };
 
         for i in 0..8 {
-            let test_instr = IJump::Instr(RegAddr::Zero);
+            let test_instr = IJump::Instr(RegAddr::panic_from_u8(i));
             test_instr.execute(&mut processor);
             assert_eq!(processor.pc, processor.regs[i as usize]);
         }
