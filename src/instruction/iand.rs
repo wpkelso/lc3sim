@@ -71,6 +71,8 @@ impl Instruction for IAnd {
 
 #[cfg(test)]
 mod tests {
+    use crate::instruction::TWELVE_SET;
+
     use super::*;
 
     const BITMASK_5: u16 = 1 << 5;
