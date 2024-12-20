@@ -44,6 +44,11 @@ impl RegAddr {
             _ => panic!("Argument outside of [0, 7] (the valid LC-3 registers"),
         }
     }
+
+    /// Converts and calls [`Self::panic_from_u8`].
+    pub const fn panic_from_u16(value: u16) -> Self {
+        Self::panic_from_u8(value as u8)
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Error)]
