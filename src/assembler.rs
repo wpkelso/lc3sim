@@ -1,4 +1,6 @@
-use std::collections::{vec_deque, VecDeque};
+use once_cell::sync::Lazy;
+use regex::{bytes::RegexSet, Regex};
+use std::collections::VecDeque;
 
 use crate::defs::{LC3Word, Op, PseudoOp, RegAddr};
 
@@ -18,21 +20,47 @@ pub enum TokenType {
     COMMENT(String),
 }
 
+const INSTR_PATTERNS: [&str; 23] = [
+    "ADD",
+    "AND",
+    "BR[nzpNZP]*",
+    "JMP",
+    "JSR",
+    "JSRR",
+    "LD",
+    "LDI",
+    "LDR",
+    "LEA",
+    "NOT",
+    "RET",
+    "RTI",
+    "ST",
+    "STI",
+    "STR",
+    "TRAP",
+    "GETC",
+    "OUT",
+    "PUTS",
+    "IN",
+    "PUTSP",
+    "HALT",
+];
+
+const META_PATTERNS: [&str; 5] = [".ORIG", ".FILL", "BLKW", ".STRINGZ", ".END"];
+
 pub fn tokenize(line: &str) -> Result<VecDeque<TokenType>, &str> {
+    // Regexes get lazy compiled then stored for reuse
+    static RE_REGISTER: Lazy<Regex> = Lazy::new(|| Regex::new(r"R[0-7]").unwrap());
+    static RE_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(r";.*").unwrap());
+    static RE_INSTR: Lazy<RegexSet> = Lazy::new(|| RegexSet::new(INSTR_PATTERNS).unwrap());
+    static RE_META: Lazy<RegexSet> = Lazy::new(|| RegexSet::new(META_PATTERNS).unwrap());
+    static RE_NUM: Lazy<Regex> = Lazy::new(|| Regex::new(r"[x|#|b]-?[0-9A-F]*").unwrap());
+
     let mut tokenized_string: VecDeque<TokenType> = VecDeque::new();
-    let mut split_string = line.split(";");
     let operation = split_string.next().unwrap().split_whitespace();
     let comment: &str = split_string.next().unwrap();
 
-    for split in operation {
-        match split {
-            "R0" | "R1" | "R2" | "R3" | "R4" | "R5" | "R6" | "R7" => {
-                tokenized_string.push_back(TokenType::REGISTER(RegAddr::One)) // TODO: turn this into a function that returns proper reg addr
-            }
-
-            _ => return Err("Unable to assign a token"),
-        }
-    }
+    for split in operation {}
 
     Ok(tokenized_string)
 }
