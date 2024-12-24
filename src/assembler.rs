@@ -20,60 +20,54 @@ pub enum TokenType {
     COMMENT(String),
 }
 
-const INSTR_PATTERNS: [&str; 23] = [
-    "ADD",
-    "AND",
-    "BR[nzpNZP]*",
-    "JMP",
-    "JSR",
-    "JSRR",
-    "LD",
-    "LDI",
-    "LDR",
-    "LEA",
-    "NOT",
-    "RET",
-    "RTI",
-    "ST",
-    "STI",
-    "STR",
-    "TRAP",
-    "GETC",
-    "OUT",
-    "PUTS",
-    "IN",
-    "PUTSP",
-    "HALT",
+// This follows the same ordering as defs.rs > pub enum Op
+const INSTR_PATTERN: [&str; 23] = [
+    r"ADD",
+    r"AND",
+    r"BR[nzpNZP]*",
+    r"JMP",
+    r"JSR",
+    r"JSRR",
+    r"LD",
+    r"LDI",
+    r"LDR",
+    r"LEA",
+    r"NOT",
+    r"RET",
+    r"RTI",
+    r"ST",
+    r"STI",
+    r"STR",
+    r"TRAP",
+    r"GETC",
+    r"OUT",
+    r"PUTS",
+    r"IN",
+    r"PUTSP",
+    r"HALT",
 ];
 
-const META_PATTERNS: [&str; 5] = [".ORIG", ".FILL", "BLKW", ".STRINGZ", ".END"];
+const META_PATTERN: [&str; 5] = [r".ORIG", r".FILL", r"BLKW", r".STRINGZ", r".END"];
+const NUM_PATTERN: &str = r"[x|#|b]-?[0-9A-F]*";
+const REG_PATTERN: &str = r"R[0-7]";
+const COMMENT_PATTERN: &str = r";*";
+const LABEL_PATTERN: &str = r"[0-9a-zA-Z]+";
 
 pub fn tokenize(line: &str) -> Result<VecDeque<TokenType>, &str> {
     // Regexes get lazy compiled then stored for reuse
-    static RE_REGISTER: Lazy<Regex> = Lazy::new(|| Regex::new(r"R[0-7]").unwrap());
-    static RE_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(r";.*").unwrap());
-    static RE_INSTR: Lazy<RegexSet> = Lazy::new(|| RegexSet::new(INSTR_PATTERNS).unwrap());
-    static RE_META: Lazy<RegexSet> = Lazy::new(|| RegexSet::new(META_PATTERNS).unwrap());
-    static RE_NUM: Lazy<Regex> = Lazy::new(|| Regex::new(r"[x|#|b]-?[0-9A-F]*").unwrap());
+    static RE_REGISTER: Lazy<Regex> = Lazy::new(|| Regex::new(REG_PATTERN).unwrap());
+    static RE_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(COMMENT_PATTERN).unwrap());
+    static RE_INSTR: Lazy<RegexSet> = Lazy::new(|| RegexSet::new(INSTR_PATTERN).unwrap());
+    static RE_META: Lazy<RegexSet> = Lazy::new(|| RegexSet::new(META_PATTERN).unwrap());
+    static RE_NUM: Lazy<Regex> = Lazy::new(|| Regex::new(NUM_PATTERN).unwrap());
+    static RE_LABEL: Lazy<Regex> = Lazy::new(|| Regex::new(LABEL_PATTERN).unwrap());
 
     let mut tokenized_string: VecDeque<TokenType> = VecDeque::new();
-    let operation = split_string.next().unwrap().split_whitespace();
-    let comment: &str = split_string.next().unwrap();
-
-    for split in operation {}
-
     Ok(tokenized_string)
 }
 
 pub fn translate_line(line: &str) -> MaybeUnresolvedInstr {
-    // 1st element: either be a LABEL or a INSTR
-    // 2nd element: INSTR if LABEL in 1 else PARAMETER
-    // last element might also be LABEL
-
-    MaybeUnresolvedInstr {
-        value: 0x0,
-        bindings: None,
-    }
+    todo!()
 }
 
 pub fn resolve_instr(instr: MaybeUnresolvedInstr) -> String {
