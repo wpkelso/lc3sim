@@ -1,6 +1,5 @@
 use once_cell::sync::Lazy;
 use regex::{bytes::RegexSet, Regex};
-use std::collections::VecDeque;
 
 use crate::defs::{LC3Word, Op, PseudoOp, RegAddr};
 
@@ -10,6 +9,7 @@ pub struct MaybeUnresolvedInstr {
     bindings: Option<(String, u8, u8)>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     LABEL(String),
     INSTR(Op),
@@ -47,13 +47,13 @@ const INSTR_PATTERN: [&str; 23] = [
     r"HALT",
 ];
 
-const META_PATTERN: [&str; 5] = [r".ORIG", r".FILL", r"BLKW", r".STRINGZ", r".END"];
-const NUM_PATTERN: &str = r"[x|#|b]-?[0-9A-F]*";
-const REG_PATTERN: &str = r"R[0-7]";
-const COMMENT_PATTERN: &str = r";*";
-const LABEL_PATTERN: &str = r"[0-9a-zA-Z]+";
+const META_PATTERN: [&str; 5] = [r"^.ORIG$", r"^.FILL$", r"^BLKW$", r"^.STRINGZ$", r"^.END$"];
+const NUM_PATTERN: &str = r"^[x|#|b]-?[0-9A-F]*$";
+const REG_PATTERN: &str = r"^R[0-7]$";
+const COMMENT_PATTERN: &str = r"^;*$";
+const LABEL_PATTERN: &str = r"^[0-9a-zA-Z]+$";
 
-pub fn tokenize(line: &str) -> Result<VecDeque<TokenType>, &str> {
+pub fn tokenize(line: &str) -> Result<TokenType, &str> {
     // Regexes get lazy compiled then stored for reuse
     static RE_REGISTER: Lazy<Regex> = Lazy::new(|| Regex::new(REG_PATTERN).unwrap());
     static RE_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(COMMENT_PATTERN).unwrap());
@@ -62,8 +62,18 @@ pub fn tokenize(line: &str) -> Result<VecDeque<TokenType>, &str> {
     static RE_NUM: Lazy<Regex> = Lazy::new(|| Regex::new(NUM_PATTERN).unwrap());
     static RE_LABEL: Lazy<Regex> = Lazy::new(|| Regex::new(LABEL_PATTERN).unwrap());
 
-    let mut tokenized_string: VecDeque<TokenType> = VecDeque::new();
-    Ok(tokenized_string)
+    let token: TokenType;
+
+    if RE_REGISTER.is_match(line) {
+        let reg_num: u8 = *line.as_bytes().get(line.len()).unwrap();
+        token = TokenType::REGISTER(RegAddr::try_from(reg_num).unwrap());
+        return Ok(token);
+    } else if RE_COMMENT.is_match(line) {
+        token = TokenType::COMMENT(line.to_string());
+        return Ok(token);
+    } else {
+        return Err("Couldn't form token");
+    }
 }
 
 pub fn translate_line(line: &str) -> MaybeUnresolvedInstr {
@@ -72,4 +82,16 @@ pub fn translate_line(line: &str) -> MaybeUnresolvedInstr {
 
 pub fn resolve_instr(instr: MaybeUnresolvedInstr) -> String {
     todo!()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn tokenize_register() {
+        let test_str: &str = "R1";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(result, TokenType::REGISTER(RegAddr::One));
+    }
 }
