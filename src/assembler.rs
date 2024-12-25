@@ -65,8 +65,9 @@ pub fn tokenize(line: &str) -> Result<TokenType, &str> {
     let token: TokenType;
 
     if RE_REGISTER.is_match(line) {
-        let reg_num: u8 = *line.as_bytes().get(line.len()).unwrap();
-        token = TokenType::REGISTER(RegAddr::try_from(reg_num).unwrap());
+        let reg_num_char: char = line.chars().nth(1).unwrap();
+        let reg_num_int: u8 = reg_num_char.to_digit(10).unwrap() as u8;
+        token = TokenType::REGISTER(RegAddr::try_from(reg_num_int).unwrap());
         return Ok(token);
     } else if RE_COMMENT.is_match(line) {
         token = TokenType::COMMENT(line.to_string());
