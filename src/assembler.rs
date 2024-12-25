@@ -50,7 +50,7 @@ const INSTR_PATTERN: [&str; 23] = [
 const META_PATTERN: [&str; 5] = [r"^.ORIG$", r"^.FILL$", r"^BLKW$", r"^.STRINGZ$", r"^.END$"];
 const NUM_PATTERN: &str = r"^[x|#|b]-?[0-9A-F]*$";
 const REG_PATTERN: &str = r"^R[0-7]$";
-const COMMENT_PATTERN: &str = r"^;*$";
+const COMMENT_PATTERN: &str = r"^;.*$";
 const LABEL_PATTERN: &str = r"^[0-9a-zA-Z]+$";
 
 pub fn tokenize(line: &str) -> Result<TokenType, &str> {
@@ -68,10 +68,10 @@ pub fn tokenize(line: &str) -> Result<TokenType, &str> {
         let reg_num_char: char = line.chars().nth(1).unwrap();
         let reg_num_int: u8 = reg_num_char.to_digit(10).unwrap() as u8;
         token = TokenType::REGISTER(RegAddr::try_from(reg_num_int).unwrap());
-        return Ok(token);
+        Ok(token)
     } else if RE_COMMENT.is_match(line) {
         token = TokenType::COMMENT(line.to_string());
-        return Ok(token);
+        Ok(token)
     } else {
         return Err("Couldn't form token");
     }
@@ -91,8 +91,55 @@ mod test {
 
     #[test]
     fn tokenize_register() {
+        // The number of register is small enough that checking that all of them parse manually is fine
+        let test_str: &str = "R0";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(result, TokenType::REGISTER(RegAddr::Zero));
+
         let test_str: &str = "R1";
         let result: TokenType = tokenize(test_str).unwrap();
         assert_eq!(result, TokenType::REGISTER(RegAddr::One));
+
+        let test_str: &str = "R2";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(result, TokenType::REGISTER(RegAddr::Two));
+
+        let test_str: &str = "R3";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(result, TokenType::REGISTER(RegAddr::Three));
+
+        let test_str: &str = "R4";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(result, TokenType::REGISTER(RegAddr::Four));
+
+        let test_str: &str = "R5";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(result, TokenType::REGISTER(RegAddr::Five));
+
+        let test_str: &str = "R6";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(result, TokenType::REGISTER(RegAddr::Six));
+
+        let test_str: &str = "R7";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(result, TokenType::REGISTER(RegAddr::Seven));
+    }
+
+    #[test]
+    #[should_panic]
+    fn tokenize_unclean_register() {
+        let test_str: &str = "R0, A_LABEL";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_ne!(result, TokenType::REGISTER(RegAddr::Zero));
+    }
+
+    #[test]
+    fn tokenize_comment() {
+        let test_str: &str = "; This is a test comment";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(
+            result,
+            TokenType::COMMENT("; This is a test comment".to_string())
+        );
     }
 }
