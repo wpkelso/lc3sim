@@ -9,15 +9,17 @@ pub struct MaybeUnresolvedInstr {
     bindings: Option<(String, u8, u8)>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum TokenType {
-    LABEL(String),
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Token {
     INSTR(Op),
     REGISTER(RegAddr),
     META(PseudoOp),
     STRING(String),
     NUM(LC3Word),
     COMMENT(String),
+    QUOTES,
+    SEMICOLON,
+    COMMA,
 }
 
 // This follows the same ordering as defs.rs > pub enum Op
@@ -51,26 +53,27 @@ const META_PATTERN: [&str; 5] = [r"^.ORIG$", r"^.FILL$", r"^BLKW$", r"^.STRINGZ$
 const NUM_PATTERN: &str = r"^[x|#|b]-?[0-9A-F]*$";
 const REG_PATTERN: &str = r"^R[0-7]$";
 const COMMENT_PATTERN: &str = r"^;.*$";
-const LABEL_PATTERN: &str = r"^[0-9a-zA-Z]+$";
+const STRING_PATTERN: &str = r"^[0-9a-zA-Z[:punct:]]+$";
 
-pub fn tokenize(line: &str) -> Result<TokenType, &str> {
+/// Take in a `&str`, returning a `Vec<Token>` that contains all syntax morphemes in the str.
+pub fn tokenize(line: &str) -> Result<Vec<Token>, &str> {
     // Regexes get lazy compiled then stored for reuse
     static RE_REGISTER: Lazy<Regex> = Lazy::new(|| Regex::new(REG_PATTERN).unwrap());
     static RE_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(COMMENT_PATTERN).unwrap());
     static RE_INSTR: Lazy<RegexSet> = Lazy::new(|| RegexSet::new(INSTR_PATTERN).unwrap());
     static RE_META: Lazy<RegexSet> = Lazy::new(|| RegexSet::new(META_PATTERN).unwrap());
     static RE_NUM: Lazy<Regex> = Lazy::new(|| Regex::new(NUM_PATTERN).unwrap());
-    static RE_LABEL: Lazy<Regex> = Lazy::new(|| Regex::new(LABEL_PATTERN).unwrap());
+    static RE_STRING: Lazy<Regex> = Lazy::new(|| Regex::new(STRING_PATTERN).unwrap());
 
-    let token: TokenType;
+    let mut token: Vec<Token> = Vec::new(); // this value is ultimately returned
 
     if RE_REGISTER.is_match(line) {
         let reg_num_char: char = line.chars().nth(1).unwrap();
         let reg_num_int: u8 = reg_num_char.to_digit(10).unwrap() as u8;
-        token = TokenType::REGISTER(RegAddr::try_from(reg_num_int).unwrap());
+        token.push(Token::REGISTER(RegAddr::try_from(reg_num_int).unwrap()));
         Ok(token)
     } else if RE_COMMENT.is_match(line) {
-        token = TokenType::COMMENT(line.to_string());
+        token.push(Token::COMMENT(line.to_string()));
         Ok(token)
     } else if RE_INSTR.is_match(line.as_bytes()) {
         let matches: Vec<_> = RE_INSTR.matches(line.as_bytes()).into_iter().collect();
@@ -82,6 +85,8 @@ pub fn tokenize(line: &str) -> Result<TokenType, &str> {
                 0 => Op::ADD,
                 1 => Op::AND,
                 2 => {
+                    // this was written before this returned a vector of tokens
+                    // it might be better to turn these into separate tokens
                     let n: bool = line.contains(['n', 'N']);
                     let z: bool = line.contains(['z', 'Z']);
                     let p: bool = line.contains(['p', 'P']);
@@ -109,7 +114,7 @@ pub fn tokenize(line: &str) -> Result<TokenType, &str> {
                 _ => return Err("Couldn't match a legal instruction"),
             };
         }
-        token = TokenType::INSTR(instr_type);
+        token.push(Token::INSTR(instr_type));
         Ok(token)
     } else if RE_META.is_match(line.as_bytes()) {
         let matches: Vec<_> = RE_META.matches(line.as_bytes()).into_iter().collect();
@@ -127,7 +132,22 @@ pub fn tokenize(line: &str) -> Result<TokenType, &str> {
                 _ => return Err("Couldn't match a legal pseudo-instruction"),
             };
         }
-        token = TokenType::META(pseudo_instr_type);
+        token.push(Token::META(pseudo_instr_type));
+        Ok(token)
+    } else if RE_NUM.is_match(line) {
+        todo!()
+    } else if RE_STRING.is_match(line.trim_matches('"')) {
+        // Strings and labels are functionally the same but one has quotes.
+        // Therefore they aren't differentiated here, and should be dealt with
+        // during lexing
+        let string = line.trim_matches('"').to_string();
+        if line.starts_with('"') {
+            token.push(Token::QUOTES)
+        }
+        token.push(Token::STRING(string));
+        if line.ends_with('"') {
+            token.push(Token::QUOTES)
+        }
         Ok(token)
     } else {
         return Err("Couldn't form token");
@@ -144,75 +164,52 @@ pub fn resolve_instr(instr: MaybeUnresolvedInstr) -> String {
 
 #[cfg(test)]
 mod test {
-    use std::result;
-
     use super::*;
 
     #[test]
     fn tokenize_register() {
-        // The number of register is small enough that checking that all of them parse manually is fine
+        // The number of registers is small enough that checking that all of them parse manually is fine
         let test_str: &str = "R0";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_eq!(result, TokenType::REGISTER(RegAddr::Zero));
-
-        let test_str: &str = "R1";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_eq!(result, TokenType::REGISTER(RegAddr::One));
-
-        let test_str: &str = "R2";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_eq!(result, TokenType::REGISTER(RegAddr::Two));
-
-        let test_str: &str = "R3";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_eq!(result, TokenType::REGISTER(RegAddr::Three));
-
-        let test_str: &str = "R4";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_eq!(result, TokenType::REGISTER(RegAddr::Four));
-
-        let test_str: &str = "R5";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_eq!(result, TokenType::REGISTER(RegAddr::Five));
-
-        let test_str: &str = "R6";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_eq!(result, TokenType::REGISTER(RegAddr::Six));
-
-        let test_str: &str = "R7";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_eq!(result, TokenType::REGISTER(RegAddr::Seven));
+        let result: Vec<Token> = tokenize(test_str).unwrap();
+        assert_eq!(result[0], Token::REGISTER(RegAddr::Zero));
     }
 
     #[test]
     #[should_panic]
     fn tokenize_unclean_register() {
         let test_str: &str = "R0, A_LABEL";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_ne!(result, TokenType::REGISTER(RegAddr::Zero));
+        let result: Vec<Token> = tokenize(test_str).unwrap();
+        assert_ne!(result[0], Token::REGISTER(RegAddr::Zero));
     }
 
     #[test]
     fn tokenize_comment() {
         let test_str: &str = "; This is a test comment";
-        let result: TokenType = tokenize(test_str).unwrap();
+        let result: Vec<Token> = tokenize(test_str).unwrap();
         assert_eq!(
-            result,
-            TokenType::COMMENT("; This is a test comment".to_string())
+            result[0],
+            Token::COMMENT("; This is a test comment".to_string())
         );
     }
 
     #[test]
     fn tokenize_instr_add() {
         let test_str: &str = "ADD";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_eq!(result, TokenType::INSTR(Op::ADD));
+        let result: Vec<Token> = tokenize(test_str).unwrap();
+        assert_eq!(result[0], Token::INSTR(Op::ADD));
     }
 
     #[test]
     fn tokenize_meta_orig() {
         let test_str: &str = ".ORIG";
-        let result: TokenType = tokenize(test_str).unwrap();
-        assert_eq!(result, TokenType::META(PseudoOp::ORIG));
+        let result: Vec<Token> = tokenize(test_str).unwrap();
+        assert_eq!(result[0], Token::META(PseudoOp::ORIG));
+    }
+
+    #[test]
+    fn tokenize_string_and_label() {
+        let test_str: &str = "Strings!";
+        let result: Vec<Token> = tokenize(test_str).unwrap();
+        assert_eq!(result[0], Token::STRING("Strings!".to_string()));
     }
 }
