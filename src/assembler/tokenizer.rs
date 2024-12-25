@@ -3,12 +3,6 @@ use regex::{bytes::RegexSet, Regex};
 
 use crate::defs::{LC3Word, Op, PseudoOp, RegAddr};
 
-pub struct MaybeUnresolvedInstr {
-    value: LC3Word,
-    ///Label, Start offset, End offset
-    bindings: Option<(String, u8, u8)>,
-}
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Token {
     INSTR(Op),
@@ -138,7 +132,7 @@ pub fn tokenize(line: &str) -> Result<Vec<Token>, &str> {
         todo!()
     } else if RE_STRING.is_match(line.trim_matches('"')) {
         // Strings and labels are functionally the same but one has quotes.
-        // Therefore they aren't differentiated here, and should be dealt with
+        // Therefore they aren't differentiated by token here, and should be dealt with
         // during lexing
         let string = line.trim_matches('"').to_string();
         if line.starts_with('"') {
@@ -152,14 +146,6 @@ pub fn tokenize(line: &str) -> Result<Vec<Token>, &str> {
     } else {
         return Err("Couldn't form token");
     }
-}
-
-pub fn translate_line(line: &str) -> MaybeUnresolvedInstr {
-    todo!()
-}
-
-pub fn resolve_instr(instr: MaybeUnresolvedInstr) -> String {
-    todo!()
 }
 
 #[cfg(test)]
