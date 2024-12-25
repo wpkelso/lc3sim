@@ -123,9 +123,10 @@ pub enum Op {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PseudoOp {
-    ORIG(LC3MemAddr),
-    FILL(LC3Word),
-    BLKW(u16),
-    STRINGZ(String),
+    ORIG,
+    FILL,
+    BLKW,
+    STRINGZ,
     END,
+    ILLEGAL,
 }

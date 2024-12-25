@@ -76,6 +76,8 @@ pub fn tokenize(line: &str) -> Result<TokenType, &str> {
         let matches: Vec<_> = RE_INSTR.matches(line.as_bytes()).into_iter().collect();
         let mut instr_type: Op = Op::ILLEGAL;
         for item in matches {
+            // this should be fine because there should only ever be 1 item in the vec
+            // if there isn't then we just match the last
             instr_type = match item {
                 0 => Op::ADD,
                 1 => Op::AND,
@@ -109,6 +111,24 @@ pub fn tokenize(line: &str) -> Result<TokenType, &str> {
         }
         token = TokenType::INSTR(instr_type);
         Ok(token)
+    } else if RE_META.is_match(line.as_bytes()) {
+        let matches: Vec<_> = RE_META.matches(line.as_bytes()).into_iter().collect();
+        let mut pseudo_instr_type: PseudoOp = PseudoOp::ILLEGAL;
+
+        for item in matches {
+            // this should be fine as there should only ever be 1 item in the vec
+            // if there isn't then we just match the last
+            pseudo_instr_type = match item {
+                0 => PseudoOp::ORIG,
+                1 => PseudoOp::FILL,
+                2 => PseudoOp::BLKW,
+                3 => PseudoOp::STRINGZ,
+                4 => PseudoOp::END,
+                _ => return Err("Couldn't match a legal pseudo-instruction"),
+            };
+        }
+        token = TokenType::META(pseudo_instr_type);
+        Ok(token)
     } else {
         return Err("Couldn't form token");
     }
@@ -124,6 +144,8 @@ pub fn resolve_instr(instr: MaybeUnresolvedInstr) -> String {
 
 #[cfg(test)]
 mod test {
+    use std::result;
+
     use super::*;
 
     #[test]
@@ -185,5 +207,12 @@ mod test {
         let test_str: &str = "ADD";
         let result: TokenType = tokenize(test_str).unwrap();
         assert_eq!(result, TokenType::INSTR(Op::ADD));
+    }
+
+    #[test]
+    fn tokenize_meta_orig() {
+        let test_str: &str = ".ORIG";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(result, TokenType::META(PseudoOp::ORIG));
     }
 }
