@@ -22,29 +22,29 @@ pub enum TokenType {
 
 // This follows the same ordering as defs.rs > pub enum Op
 const INSTR_PATTERN: [&str; 23] = [
-    r"ADD",
-    r"AND",
-    r"BR[nzpNZP]*",
-    r"JMP",
-    r"JSR",
-    r"JSRR",
-    r"LD",
-    r"LDI",
-    r"LDR",
-    r"LEA",
-    r"NOT",
-    r"RET",
-    r"RTI",
-    r"ST",
-    r"STI",
-    r"STR",
-    r"TRAP",
-    r"GETC",
-    r"OUT",
-    r"PUTS",
-    r"IN",
-    r"PUTSP",
-    r"HALT",
+    r"^ADD$",
+    r"^AND$",
+    r"^BR[nN]?[zZ]?[pP]?$",
+    r"^JMP$",
+    r"^JSR$",
+    r"^JSRR$",
+    r"^LD$",
+    r"^LDI$",
+    r"^LDR$",
+    r"^LEA$",
+    r"^NOT$",
+    r"^RET$",
+    r"^RTI$",
+    r"^ST$",
+    r"^STI$",
+    r"^STR$",
+    r"^TRAP$",
+    r"^GETC$",
+    r"^OUT$",
+    r"^PUTS$",
+    r"^IN$",
+    r"^PUTSP$",
+    r"^HALT$",
 ];
 
 const META_PATTERN: [&str; 5] = [r"^.ORIG$", r"^.FILL$", r"^BLKW$", r"^.STRINGZ$", r"^.END$"];
@@ -71,6 +71,43 @@ pub fn tokenize(line: &str) -> Result<TokenType, &str> {
         Ok(token)
     } else if RE_COMMENT.is_match(line) {
         token = TokenType::COMMENT(line.to_string());
+        Ok(token)
+    } else if RE_INSTR.is_match(line.as_bytes()) {
+        let matches: Vec<_> = RE_INSTR.matches(line.as_bytes()).into_iter().collect();
+        let mut instr_type: Op = Op::ILLEGAL;
+        for item in matches {
+            instr_type = match item {
+                0 => Op::ADD,
+                1 => Op::AND,
+                2 => {
+                    let n: bool = line.contains(['n', 'N']);
+                    let z: bool = line.contains(['z', 'Z']);
+                    let p: bool = line.contains(['p', 'P']);
+                    Op::BR(n, z, p)
+                }
+                3 => Op::JMP,
+                4 => Op::JSR,
+                5 => Op::JSRR,
+                6 => Op::LD,
+                7 => Op::LDI,
+                8 => Op::LDR,
+                9 => Op::LEA,
+                10 => Op::RET,
+                11 => Op::RTI,
+                12 => Op::ST,
+                13 => Op::STI,
+                14 => Op::STR,
+                15 => Op::TRAP,
+                16 => Op::GETC,
+                17 => Op::OUT,
+                18 => Op::PUTS,
+                19 => Op::IN,
+                20 => Op::PUTSP,
+                21 => Op::HALT,
+                _ => return Err("Couldn't match a legal instruction"),
+            };
+        }
+        token = TokenType::INSTR(instr_type);
         Ok(token)
     } else {
         return Err("Couldn't form token");
@@ -141,5 +178,12 @@ mod test {
             result,
             TokenType::COMMENT("; This is a test comment".to_string())
         );
+    }
+
+    #[test]
+    fn tokenize_instr_add() {
+        let test_str: &str = "ADD";
+        let result: TokenType = tokenize(test_str).unwrap();
+        assert_eq!(result, TokenType::INSTR(Op::ADD));
     }
 }

@@ -97,7 +97,7 @@ impl From<RegAddr> for usize {
 pub enum Op {
     ADD,
     AND,
-    BR,
+    BR(bool, bool, bool), // NZP
     JMP,
     JSR,
     JSRR,
@@ -118,6 +118,7 @@ pub enum Op {
     IN,
     PUTSP,
     HALT,
+    ILLEGAL,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
