@@ -17,14 +17,6 @@ pub struct LC3MemLoc {
     pub value: LC3Word,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Error)]
-#[error("{privilege} is not sufficient (>=) for {required}")]
-/// Privilege check failure.
-pub struct PrivilegeViolation {
-    pub privilege: u8,
-    pub required: u8,
-}
-
 /// Failure occured during a machine step.
 ///
 /// [`Self::InvalidInstruction`] and [`Self::InsufficientPerms`] enter an
@@ -35,8 +27,8 @@ pub enum StepFailure {
         "{0} is not a valid LC3 instruction: {top_bits} is an invalid opcode.", top_bits = format_word_bits(*.0, 0)
     )]
     InvalidInstruction(LC3Word),
-    #[error(transparent)]
-    InsufficientPerms(PrivilegeViolation),
+    #[error("User mode attempted supervisor mode operation.")]
+    InsufficientPerms,
     #[error("{max_addr} is the largest possible LC3 address, PC cannot advance further.", max_addr = LC3MemAddr::MAX)]
     LastAddress,
     #[error("The machine must be unhalted to progress")]
@@ -56,6 +48,30 @@ pub trait LC3 {
     fn mem(&self, addr: LC3MemAddr) -> LC3Word;
     fn set_mem(&mut self, addr: LC3MemAddr, value: LC3Word);
 
+    /// Current priority in [0, 7].
+    ///
+    /// 0 is the lowest priority, 7 is the highest.
+    fn priority(&self) -> u8;
+    /// Sets priority if in [0, 7].
+    fn set_priority(&mut self, priority: u8);
+
+    /// True if in supervisor mode, false if in user mode.
+    fn privileged(&self) -> bool;
+    /// Sets to supervisor mode if true; to user mode if false.
+    fn set_privileged(&mut self, priviledged: bool);
+
+    /// Returns the current processor status register value.
+    fn processor_status_reg(&self) -> LC3Word {
+        let privilege = if self.privileged() { 0 } else { 1 << 15 };
+        let with_priority = privilege | ((self.priority() as LC3Word) << 8);
+
+        let n = if self.negative_cond() { 1 << 2 } else { 0 };
+        let z = if self.zero_cond() { 1 << 1 } else { 0 };
+        let p = if self.positive_cond() { 1 } else { 0 };
+
+        with_priority | n | z | p
+    }
+
     /// Return the instruction at [`Self::pc`], if any.
     fn cur_inst(&self) -> Option<InstructionEnum> {
         InstructionEnum::parse(self.mem(self.pc()))
@@ -74,6 +90,9 @@ pub trait LC3 {
     fn flag_zero(&mut self);
     /// Sets the negative flag.
     fn flag_negative(&mut self);
+
+    /// Clears the sign flags.
+    fn clear_flags(&mut self);
 
     /// Produces all words in order from 0x0000.
     type FullIter<'a>: Iterator<Item = LC3Word>

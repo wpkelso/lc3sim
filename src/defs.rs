@@ -33,7 +33,7 @@ pub const MACHINE_CONTROL_REGISTER: LC3Word = 0xFFFE;
 /// Number of registers in the LC3 spec
 pub const NUM_REGS: usize = 8_usize;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RegAddr {
     Zero,
     One,

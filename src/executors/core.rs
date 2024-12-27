@@ -18,6 +18,8 @@ struct ConditionReg {
 pub struct CoreLC3 {
     mem: Box<[LC3Word; ADDR_SPACE_SIZE]>,
     conds: ConditionReg,
+    priority: u8,
+    privileged: bool,
     regs: Box<[LC3Word; NUM_REGS]>,
     pc: LC3MemAddr,
 }
@@ -31,6 +33,8 @@ impl CoreLC3 {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
             regs: Box::new([0; NUM_REGS]),
             pc: 0x0000,
         }
@@ -65,6 +69,22 @@ impl LC3 for CoreLC3 {
         self.mem[addr as usize] = value;
     }
 
+    fn priority(&self) -> u8 {
+        self.priority
+    }
+    fn set_priority(&mut self, priority: u8) {
+        if priority < 8 {
+            self.priority = priority
+        }
+    }
+
+    fn privileged(&self) -> bool {
+        self.privileged
+    }
+    fn set_privileged(&mut self, priviledged: bool) {
+        self.privileged = priviledged
+    }
+
     fn positive_cond(&self) -> bool {
         self.conds.positive
     }
@@ -92,6 +112,14 @@ impl LC3 for CoreLC3 {
     fn flag_negative(&mut self) {
         self.conds = ConditionReg {
             negative: true,
+            zero: false,
+            positive: false,
+        }
+    }
+
+    fn clear_flags(&mut self) {
+        self.conds = ConditionReg {
+            negative: false,
             zero: false,
             positive: false,
         }
@@ -193,6 +221,8 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 18]),
             pc: 0x0000,
         };
@@ -215,6 +245,8 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 18]),
             pc: 0x0000,
         };
@@ -237,6 +269,8 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 0]),
             pc: 0x0000,
         };
@@ -259,6 +293,8 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 0]),
             pc: 0x0000,
         };
@@ -291,6 +327,8 @@ mod test {
                 0b0101010101010101,
                 0b1010101010101010,
             ]),
+            priority: 0,
+            privileged: false,
             pc: 0x0000,
         };
 
@@ -311,6 +349,8 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
             regs: Box::new([0, 0, 0, 0, 0, 0, 0, 0]),
             pc: 0x0000,
         };
@@ -445,6 +485,8 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
             regs: Box::new([
                 0x3000, 0x0000, 0x1000, 0x0200, 0xff00, 0xfe00, 0x3000, 0x7301,
             ]),
@@ -472,6 +514,8 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
             regs: Box::new([
                 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
@@ -504,6 +548,8 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
             regs: Box::new([
                 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
@@ -558,6 +604,8 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
             regs: Box::new([
                 0xFF14, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
@@ -590,5 +638,51 @@ mod test {
         });
         test_instr.execute(&mut processor);
         assert_eq!(processor.mem[0x3006], 0xFF14);
+    }
+
+    #[test]
+    fn priority_reg() {
+        let mut processor = CoreLC3::new();
+
+        processor.set_priority(3);
+        assert_eq!(processor.priority(), 3);
+        processor.set_priority(0);
+        assert_eq!(processor.priority(), 0);
+    }
+
+    #[test]
+    fn privilege_reg() {
+        let mut processor = CoreLC3::new();
+
+        processor.set_privileged(true);
+        assert!(processor.privileged());
+        processor.set_privileged(false);
+        assert!(!processor.privileged());
+    }
+
+    #[test]
+    fn processor_status_reg() {
+        let mut processor = CoreLC3::new();
+
+        processor.set_priority(0);
+        processor.set_privileged(true);
+        processor.clear_flags();
+
+        assert_eq!(processor.processor_status_reg(), 0);
+
+        processor.set_privileged(false);
+        assert_eq!(processor.processor_status_reg(), 0x8000);
+
+        processor.flag_negative();
+        assert_eq!(processor.processor_status_reg(), 0x8004);
+
+        processor.flag_zero();
+        assert_eq!(processor.processor_status_reg(), 0x8002);
+
+        processor.flag_positive();
+        assert_eq!(processor.processor_status_reg(), 0x8001);
+
+        processor.set_priority(5);
+        assert_eq!(processor.processor_status_reg(), 0x8501);
     }
 }
