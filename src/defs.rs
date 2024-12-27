@@ -17,6 +17,19 @@ pub const USER_SPACE: LC3Word = 0x3000;
 /// First address of the device register address space
 pub const DEV_REG_ADDR: LC3Word = 0xFE00;
 
+pub const KEYBOARD_INTERRUPT: LC3Word = 0x0080;
+
+/// Bit 15 is 1 when the keyboard has received a new character.
+pub const KEYBOARD_STATUS_REGISTER: LC3Word = 0xFE00;
+/// Last character typed on the keyboard.
+pub const KEYBOARD_DATA_REGISTER: LC3Word = 0xFE02;
+/// Bit 15 is 1 when the display is ready to receive a new character.
+pub const DISPLAY_STATUS_REGISTER: LC3Word = 0xFE04;
+/// Characters written to this low byte will be displayed on screen.
+pub const DISPLAY_DATA_REGISTER: LC3Word = 0xFE06;
+/// Bit 15 is clock enable -- machine runs while set to 1.
+pub const MACHINE_CONTROL_REGISTER: LC3Word = 0xFFFE;
+
 /// Number of registers in the LC3 spec
 pub const NUM_REGS: usize = 8_usize;
 

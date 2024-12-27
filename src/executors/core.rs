@@ -1,4 +1,7 @@
-use std::iter::FusedIterator;
+use std::{
+    future::{ready, Ready},
+    iter::FusedIterator,
+};
 
 use crate::defs::{LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, NUM_REGS};
 
