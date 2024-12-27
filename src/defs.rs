@@ -4,20 +4,27 @@ pub type LC3Word = u16;
 pub type SignedLC3Word = i16;
 pub type LC3MemAddr = u16;
 
-/// Size of the memory address space
+/// Size of the memory address space.
 pub const ADDR_SPACE_SIZE: usize = 2_usize.pow(16_u32);
-/// First address of the trap vector table
+/// First address of the trap vector table.
 pub const TRAP_VEC_TBL: LC3Word = 0x0000;
-/// First address of the interrupt vector table
+/// First address of the interrupt vector table.
 pub const IR_VEC_TBL: LC3Word = 0x0100;
-/// First address of the operating and supervisor stack space
+/// First address of the operating and supervisor stack space.
 pub const OS_SUPER_STACK: LC3Word = 0x0200;
-/// First address of the user code space
+/// First address of the user code space.
 pub const USER_SPACE: LC3Word = 0x3000;
-/// First address of the device register address space
+/// First address of the device register address space.
 pub const DEV_REG_ADDR: LC3Word = 0xFE00;
 
+/// Initial supervisor stack pointer value.
+pub const SUPERVISOR_SP_INIT: LC3Word = USER_SPACE - 1;
+
+/// Vector for a keyboard I/O interrupt.
 pub const KEYBOARD_INTERRUPT: LC3Word = 0x0080;
+
+/// Register with a special stack meaning in privileged mode.
+pub const STACK_REG: RegAddr = RegAddr::Six;
 
 /// Bit 15 is 1 when the keyboard has received a new character.
 pub const KEYBOARD_STATUS_REGISTER: LC3Word = 0xFE00;

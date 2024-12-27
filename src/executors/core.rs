@@ -3,7 +3,9 @@ use std::{
     iter::FusedIterator,
 };
 
-use crate::defs::{LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, NUM_REGS};
+use crate::defs::{
+    LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, NUM_REGS, STACK_REG, SUPERVISOR_SP_INIT,
+};
 
 use super::{LC3MemLoc, StepFailure, LC3};
 
@@ -21,6 +23,7 @@ pub struct CoreLC3 {
     priority: u8,
     privileged: bool,
     regs: Box<[LC3Word; NUM_REGS]>,
+    supervisor_sp: LC3Word,
     pc: LC3MemAddr,
 }
 
@@ -35,6 +38,7 @@ impl CoreLC3 {
             },
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([0; NUM_REGS]),
             pc: 0x0000,
         }
@@ -56,10 +60,22 @@ impl LC3 for CoreLC3 {
     }
 
     fn reg(&self, addr: RegAddr) -> LC3Word {
-        self.regs[usize::from(addr)]
+        let reg_addr = usize::from(addr);
+
+        if self.privileged && reg_addr == STACK_REG.into() {
+            self.supervisor_sp
+        } else {
+            self.regs[reg_addr]
+        }
     }
     fn set_reg(&mut self, addr: RegAddr, value: LC3Word) {
-        self.regs[usize::from(addr)] = value
+        let reg_addr = usize::from(addr);
+
+        if self.privileged && reg_addr == STACK_REG.into() {
+            self.supervisor_sp = value
+        } else {
+            self.regs[reg_addr] = value
+        }
     }
 
     fn mem(&self, addr: LC3MemAddr) -> LC3Word {
@@ -223,6 +239,7 @@ mod test {
             },
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 18]),
             pc: 0x0000,
         };
@@ -247,6 +264,7 @@ mod test {
             },
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 18]),
             pc: 0x0000,
         };
@@ -271,6 +289,7 @@ mod test {
             },
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 0]),
             pc: 0x0000,
         };
@@ -295,6 +314,7 @@ mod test {
             },
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 0]),
             pc: 0x0000,
         };
@@ -329,6 +349,7 @@ mod test {
             ]),
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             pc: 0x0000,
         };
 
@@ -351,6 +372,7 @@ mod test {
             },
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([0, 0, 0, 0, 0, 0, 0, 0]),
             pc: 0x0000,
         };
@@ -487,6 +509,7 @@ mod test {
             },
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([
                 0x3000, 0x0000, 0x1000, 0x0200, 0xff00, 0xfe00, 0x3000, 0x7301,
             ]),
@@ -516,6 +539,7 @@ mod test {
             },
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([
                 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
@@ -550,6 +574,7 @@ mod test {
             },
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([
                 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
@@ -606,6 +631,7 @@ mod test {
             },
             priority: 0,
             privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([
                 0xFF14, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
