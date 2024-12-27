@@ -4,16 +4,21 @@ pub type LC3Word = u16;
 pub type SignedLC3Word = i16;
 pub type LC3MemAddr = u16;
 
-pub const ADDR_SPACE_SIZE: usize = 2_usize.pow(16_u32); //size of the memory address space
-pub const TRAP_VEC_TBL: LC3Word = 0x0000; //first address of the trap vector table
-pub const IR_VEC_TBL: LC3Word = 0x0100; //first address of the interrupt vector table
-pub const OS_SUPER_STACK: LC3Word = 0x0200; //first address of the operating and supervisor
-                                            //stack space
-pub const USER_SPACE: LC3Word = 0x3000; //first address of the user code space
-pub const DEV_REG_ADDR: LC3Word = 0xFE00; //first address of the device register address
-                                          //space
+/// Size of the memory address space
+pub const ADDR_SPACE_SIZE: usize = 2_usize.pow(16_u32);
+/// First address of the trap vector table
+pub const TRAP_VEC_TBL: LC3Word = 0x0000;
+/// First address of the interrupt vector table
+pub const IR_VEC_TBL: LC3Word = 0x0100;
+/// First address of the operating and supervisor stack space
+pub const OS_SUPER_STACK: LC3Word = 0x0200;
+/// First address of the user code space
+pub const USER_SPACE: LC3Word = 0x3000;
+/// First address of the device register address space
+pub const DEV_REG_ADDR: LC3Word = 0xFE00;
 
-pub const NUM_REGS: usize = 8_usize; //number of registers in the LC3 spec
+/// Number of registers in the LC3 spec
+pub const NUM_REGS: usize = 8_usize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RegAddr {
