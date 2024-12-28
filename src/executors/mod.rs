@@ -167,9 +167,10 @@ pub trait LC3 {
         }
 
         // PSR and PC stack pushes
-        self.set_mem(self.reg(STACK_REG), psr);
-        self.set_mem(self.reg(STACK_REG) - 1, self.pc());
-        self.set_reg(STACK_REG, self.reg(STACK_REG) - 2);
+        let stack_reg = self.reg(STACK_REG);
+        self.set_mem(stack_reg, psr);
+        self.set_mem(stack_reg - 1, self.pc());
+        self.set_reg(STACK_REG, stack_reg - 2);
 
         self.set_pc(0x0100 + vector);
     }

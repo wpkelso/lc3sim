@@ -1,8 +1,10 @@
 use crate::{
-    defs::{LC3Word, RegAddr},
+    defs::{LC3Word, RegAddr, STACK_REG},
     executors::LC3,
     instruction::{get_bits, get_opcode, Instruction, InstructionErr},
 };
+
+use super::InsufficientPerms;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IJump {
@@ -17,13 +19,28 @@ pub const ALL_JUMP_OPCODES: [u8; 2] = [JMP_OPCODE, RTI_OPCODE];
 impl Instruction for IJump {
     fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         let dest = match self {
-            Self::Instr(base_reg) => base_reg,
-            Self::Ret => RegAddr::Seven,
+            Self::Instr(base_reg) => processor.reg(base_reg),
+            Self::Ret => processor.reg(RegAddr::Seven),
             Self::InterRet => {
-                unimplemented!()
+                if !processor.privileged() {
+                    return Err(InsufficientPerms.into());
+                } else {
+                    let stack_reg = processor.reg(STACK_REG);
+
+                    // Pop PC and PSR from the supervisor stack
+                    let pc = processor.mem(stack_reg + 1);
+                    let psr = processor.mem(stack_reg + 2);
+                    processor.set_reg(STACK_REG, stack_reg - 2);
+
+                    // Restoring the status register also assigns STACK_REG
+                    // correctly
+                    processor.set_processor_status_reg(psr);
+
+                    pc
+                }
             }
         };
-        processor.set_pc(processor.reg(dest));
+        processor.set_pc(dest);
         Ok(())
     }
 
@@ -54,6 +71,111 @@ impl Instruction for IJump {
             }
             // Not one of two valid opcodes
             _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::instruction::TWELVE_SET;
+
+    use super::*;
+
+    #[test]
+    fn reject_invalid_opcodes() {
+        // All other opcodes
+        let invalid_opcodes =
+            (0..LC3Word::MAX).filter(|word| !ALL_JUMP_OPCODES.contains(&((word >> 12) as u8)));
+
+        for invalid in invalid_opcodes {
+            assert!(IJump::parse(invalid).is_none())
+        }
+    }
+
+    mod jmp {
+        use super::*;
+
+        const BASE_OPCODE: u16 = (JMP_OPCODE as u16) << 12;
+
+        const BITMASK_11_9: u16 = 0b111 << 9;
+        const BITMASK_5_0: u16 = (1 << 6) - 1;
+
+        #[test]
+        fn reject_invalid_parses() {
+            let invalid_parses = (BASE_OPCODE..(BASE_OPCODE + TWELVE_SET))
+                .filter(|word| (word & (BITMASK_11_9 | BITMASK_5_0)) != 0);
+
+            for invalid in invalid_parses {
+                assert!(
+                    IJump::parse(invalid).is_none(),
+                    "{:?}",
+                    invalid.to_be_bytes()
+                )
+            }
+        }
+
+        #[test]
+        fn parse_reg() {
+            let base = BASE_OPCODE;
+
+            for dr in 0..7 {
+                let full = base | (dr << 6);
+                if let IJump::Instr(parsed) = IJump::parse(full).unwrap() {
+                    assert_eq!(parsed as u16, dr);
+                } else {
+                    panic!("Must parse as register!")
+                }
+            }
+
+            let dr = 7;
+            let full = base | (dr << 6);
+            assert_eq!(IJump::parse(full).unwrap(), IJump::Ret);
+        }
+    }
+
+    mod rti {
+        use crate::{
+            defs::{IO_PRIORITY, KEYBOARD_INTERRUPT, SUPERVISOR_SP_INIT},
+            executors::core::CoreLC3,
+        };
+
+        use super::*;
+
+        const BASE_OPCODE: u16 = (RTI_OPCODE as u16) << 12;
+
+        const BITMASK_11_0: u16 = (1 << 12) - 1;
+
+        #[test]
+        fn reject_invalid_parses() {
+            let invalid_parses =
+                (BASE_OPCODE..(BASE_OPCODE + TWELVE_SET)).filter(|word| (word & BITMASK_11_0) != 0);
+
+            for invalid in invalid_parses {
+                assert!(IJump::parse(invalid).is_none())
+            }
+        }
+
+        #[test]
+        fn full_jump() {
+            let mut processor = CoreLC3::new();
+            processor.set_privileged(false);
+            processor.set_reg(STACK_REG, 63);
+
+            processor.interrupt(KEYBOARD_INTERRUPT, Some(IO_PRIORITY));
+
+            assert!(processor.privileged());
+            assert_eq!(processor.pc(), KEYBOARD_INTERRUPT + 0x0100);
+            assert_eq!(processor.reg(STACK_REG), SUPERVISOR_SP_INIT - 2);
+
+            todo!("Missing op to LC3 word conversion")
+        }
+
+        #[test]
+        fn invalid_return() {
+            let mut processor = CoreLC3::new();
+            processor.set_privileged(false);
+
+            todo!("Missing op to LC3 word conversion")
         }
     }
 }

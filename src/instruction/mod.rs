@@ -43,7 +43,7 @@ pub struct InsufficientPerms;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Error)]
 pub enum InstructionErr {
     #[error(transparent)]
-    InsufficientPerms(InsufficientPerms),
+    InsufficientPerms(#[from] InsufficientPerms),
 }
 
 pub trait Instruction {

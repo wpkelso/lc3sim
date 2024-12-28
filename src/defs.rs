@@ -22,6 +22,8 @@ pub const SUPERVISOR_SP_INIT: LC3Word = USER_SPACE - 1;
 
 /// Vector for a keyboard I/O interrupt.
 pub const KEYBOARD_INTERRUPT: LC3Word = 0x0080;
+/// Priority for an I/O interrupt
+pub const IO_PRIORITY: u8 = 4;
 
 /// Register with a special stack meaning in privileged mode.
 pub const STACK_REG: RegAddr = RegAddr::Six;
