@@ -119,3 +119,9 @@ impl From<RegAddr> for usize {
         u8::from(value) as usize
     }
 }
+
+impl From<RegAddr> for u16 {
+    fn from(value: RegAddr) -> Self {
+        u8::from(value) as u16
+    }
+}

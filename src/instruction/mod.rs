@@ -46,6 +46,7 @@ pub enum InstructionErr {
     InsufficientPerms(#[from] InsufficientPerms),
 }
 
+//pub trait Instruction: Into<LC3Word> {
 pub trait Instruction {
     /// Run this instruction on `P`, producing all outputs and side effects.
     fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr>;
@@ -107,6 +108,24 @@ impl Instruction for InstructionEnum {
         }
     }
 }
+
+/*
+impl From<InstructionEnum> for LC3Word {
+    fn from(value: InstructionEnum) -> Self {
+        match value {
+            InstructionEnum::IAdd(x) => x.into(),
+            InstructionEnum::IAnd(x) => x.into(),
+            InstructionEnum::INot(x) => x.into(),
+            InstructionEnum::IBranch(x) => x.into(),
+            InstructionEnum::IJump(x) => x.into(),
+            InstructionEnum::IJumpSubRoutine(x) => x.into(),
+            InstructionEnum::ILoad(x) => x.into(),
+            InstructionEnum::IStore(x) => x.into(),
+            InstructionEnum::Trap(x) => x.into(),
+        }
+    }
+}
+*/
 
 #[cfg(test)]
 /// Utility value for calculating instruction range.

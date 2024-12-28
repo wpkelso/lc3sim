@@ -186,14 +186,7 @@ mod tests {
             .filter(|word| ((word & BITMASK_5) != 0) || (word & BITMASK_4_3 == 0));
 
         for valid in valid_opcodes {
-            assert_eq!(
-                LC3Word::from(IAdd::parse(valid).unwrap()),
-                valid,
-                "{:?} ? {:?} => {:?}",
-                valid.to_be_bytes(),
-                LC3Word::from(IAdd::parse(valid).unwrap()).to_be_bytes(),
-                IAdd::parse(valid).unwrap()
-            )
+            assert_eq!(LC3Word::from(IAdd::parse(valid).unwrap()), valid)
         }
     }
 }

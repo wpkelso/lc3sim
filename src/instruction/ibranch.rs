@@ -50,3 +50,88 @@ impl Instruction for IBranch {
         }
     }
 }
+
+impl From<IBranch> for LC3Word {
+    fn from(value: IBranch) -> Self {
+        const BASE: LC3Word = (BRANCH_OPCODE as LC3Word) << 12;
+
+        let mut with_cond = BASE;
+
+        if value.cond_codes.negative {
+            with_cond |= 1 << 11;
+        }
+        if value.cond_codes.zero {
+            with_cond |= 1 << 10;
+        }
+        if value.cond_codes.positive {
+            with_cond |= 1 << 9;
+        }
+
+        with_cond | value.pc_offset
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::instruction::TWELVE_SET;
+
+    use super::*;
+
+    const BITMASK_9: u16 = 1 << 9;
+    const BASE_OPCODE: u16 = (BRANCH_OPCODE as u16) << 12;
+
+    #[test]
+    fn reject_invalid_opcodes() {
+        // All other opcodes
+        let invalid_opcodes = (0..LC3Word::MAX).filter(|word| (word >> 12) != BRANCH_OPCODE as u16);
+
+        for invalid in invalid_opcodes {
+            assert!(IBranch::parse(invalid).is_none())
+        }
+    }
+
+    #[test]
+    fn parse() {
+        let base = BASE_OPCODE;
+
+        for offset in 0..BITMASK_9 {
+            let with_offset = base | offset;
+
+            for neg in [true, false] {
+                for zero in [true, false] {
+                    for pos in [true, false] {
+                        let mut full = with_offset;
+                        if neg {
+                            full |= 1 << 11
+                        }
+                        if zero {
+                            full |= 1 << 10
+                        }
+                        if pos {
+                            full |= 1 << 9
+                        }
+
+                        let IBranch {
+                            cond_codes,
+                            pc_offset,
+                        } = IBranch::parse(full).unwrap();
+
+                        assert_eq!(pc_offset, offset);
+                        assert_eq!(cond_codes.negative, neg);
+                        assert_eq!(cond_codes.zero, zero);
+                        assert_eq!(cond_codes.positive, pos);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn reconstruct() {
+        let valid_opcodes = BASE_OPCODE..(BASE_OPCODE + TWELVE_SET);
+
+        for valid in valid_opcodes {
+            assert_eq!(LC3Word::from(IBranch::parse(valid).unwrap()), valid)
+        }
+    }
+}
