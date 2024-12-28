@@ -2,20 +2,10 @@ use anyhow::{bail, Result};
 use once_cell::sync::Lazy;
 use regex::{bytes::RegexSet, Regex};
 
-use crate::defs::{LC3Word, Op, PseudoOp, RegAddr};
+use crate::defs::{Op, PseudoOp, RegAddr};
+use crate::assembler::Token;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Token {
-    INSTR(Op),
-    REGISTER(RegAddr),
-    META(PseudoOp),
-    STRING(String),
-    NUM(LC3Word),
-    COMMENT(String),
-    QUOTES,
-    SEMICOLON,
-    COMMA,
-}
+
 
 // This follows the same ordering as defs.rs > pub enum Op
 const INSTR_PATTERN: [&str; 23] = [
