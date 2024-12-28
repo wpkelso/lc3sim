@@ -92,3 +92,41 @@ impl From<RegAddr> for usize {
         u8::from(value) as usize
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Op {
+    ADD,
+    AND,
+    BR(bool, bool, bool), // NZP
+    JMP,
+    JSR,
+    JSRR,
+    LD,
+    LDI,
+    LDR,
+    LEA,
+    NOT,
+    RET,
+    RTI,
+    ST,
+    STI,
+    STR,
+    TRAP,
+    GETC,
+    OUT,
+    PUTS,
+    IN,
+    PUTSP,
+    HALT,
+    ILLEGAL,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum PseudoOp {
+    ORIG,
+    FILL,
+    BLKW,
+    STRINGZ,
+    END,
+    ILLEGAL,
+}
