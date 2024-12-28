@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["defs","executors","instruction"]};
+window.SIDEBAR_ITEMS = {"mod":["assembler","defs","executors","instruction"]};
