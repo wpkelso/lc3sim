@@ -1,7 +1,9 @@
 use crate::{
     defs::LC3Word,
     executors::LC3,
-    instruction::{args::ConditionCodes, get_bit, get_bits, get_opcode, Instruction},
+    instruction::{
+        args::ConditionCodes, get_bit, get_bits, get_opcode, Instruction, InstructionErr,
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -14,7 +16,7 @@ pub struct IBranch {
 pub const BRANCH_OPCODE: u8 = 0b0000;
 
 impl Instruction for IBranch {
-    fn execute<P: LC3>(self, processor: &mut P) {
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         let pos_condition = self.cond_codes.positive && processor.positive_cond();
         let zero_condition = self.cond_codes.zero && processor.zero_cond();
         let neg_condition = self.cond_codes.negative && processor.negative_cond();
@@ -22,6 +24,8 @@ impl Instruction for IBranch {
         if pos_condition || zero_condition || neg_condition {
             processor.set_pc(processor.pc() + self.pc_offset);
         }
+
+        Ok(())
     }
 
     fn parse(word: LC3Word) -> Option<Self>

@@ -13,6 +13,7 @@ use ijumpsr::JSR_OPCODE;
 use iload::ALL_LOAD_OPCODES;
 use inot::NOT_OPCODE;
 use istore::ALL_STORE_OPCODES;
+use thiserror::Error;
 use trap::TRAP_OPCODE;
 use util::*;
 
@@ -35,9 +36,19 @@ pub use istore::IStore;
 mod trap;
 pub use trap::Trap;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Error)]
+#[error("User mode attempted supervisor mode operation.")]
+pub struct InsufficientPerms;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Error)]
+pub enum InstructionErr {
+    #[error(transparent)]
+    InsufficientPerms(InsufficientPerms),
+}
+
 pub trait Instruction {
     /// Run this instruction on `P`, producing all outputs and side effects.
-    fn execute<P: LC3>(self, processor: &mut P);
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr>;
 
     /// Convert the word into this instruction, if possible.
     fn parse(word: LC3Word) -> Option<Self>
@@ -63,7 +74,7 @@ pub enum InstructionEnum {
 }
 
 impl Instruction for InstructionEnum {
-    fn execute<P: LC3>(self, processor: &mut P) {
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         match self {
             Self::IAdd(x) => x.execute(processor),
             Self::IAnd(x) => x.execute(processor),

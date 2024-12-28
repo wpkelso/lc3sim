@@ -1,7 +1,9 @@
 use crate::{
     defs::{LC3Word, RegAddr},
     executors::LC3,
-    instruction::{args::InstrPCOffset11, get_bit, get_bits, get_opcode, Instruction},
+    instruction::{
+        args::InstrPCOffset11, get_bit, get_bits, get_opcode, Instruction, InstructionErr,
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -12,7 +14,7 @@ pub enum IJumpSubRoutine {
 pub const JSR_OPCODE: u8 = 0b0100;
 
 impl Instruction for IJumpSubRoutine {
-    fn execute<P: LC3>(self, processor: &mut P) {
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         processor.set_reg(RegAddr::Seven, processor.pc()); //save return address
         let jump_addr = match self {
             Self::Offset(InstrPCOffset11 { pc_offset }) => {
@@ -25,6 +27,8 @@ impl Instruction for IJumpSubRoutine {
             }
         };
         processor.set_pc(jump_addr);
+
+        Ok(())
     }
 
     fn parse(word: LC3Word) -> Option<Self>

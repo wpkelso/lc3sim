@@ -3,7 +3,7 @@ use crate::{
     executors::LC3,
     instruction::{
         args::{InstrOffset6, InstrPCOffset9},
-        get_bits, get_opcode, set_condition_codes, Instruction,
+        get_bits, get_opcode, set_condition_codes, Instruction, InstructionErr,
     },
 };
 
@@ -21,7 +21,7 @@ pub const LEA_OPCODE: u8 = 0b1110;
 pub const ALL_LOAD_OPCODES: [u8; 4] = [LD_OPCODE, LDI_OPCODE, LDR_OPCODE, LEA_OPCODE];
 
 impl Instruction for ILoad {
-    fn execute<P: LC3>(self, processor: &mut P) {
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         let result;
         match self {
             Self::Std(InstrPCOffset9 {
@@ -60,6 +60,8 @@ impl Instruction for ILoad {
         }
 
         set_condition_codes(processor, result);
+
+        Ok(())
     }
 
     fn parse(word: LC3Word) -> Option<Self>

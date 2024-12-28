@@ -1,7 +1,9 @@
 use crate::{
     defs::{LC3Word, RegAddr},
     executors::LC3,
-    instruction::{args::InstrRegOnly, get_bits, get_opcode, set_condition_codes, Instruction},
+    instruction::{
+        args::InstrRegOnly, get_bits, get_opcode, set_condition_codes, Instruction, InstructionErr,
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -9,7 +11,7 @@ pub struct INot(pub InstrRegOnly);
 pub const NOT_OPCODE: u8 = 0b1001;
 
 impl Instruction for INot {
-    fn execute<P: LC3>(self, processor: &mut P) {
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         let InstrRegOnly { dest_reg, src_reg } = self.0;
 
         let dest;
@@ -19,6 +21,8 @@ impl Instruction for INot {
         };
         processor.set_reg(dest, result);
         set_condition_codes(processor, result);
+
+        Ok(())
     }
 
     fn parse(word: LC3Word) -> Option<Self>

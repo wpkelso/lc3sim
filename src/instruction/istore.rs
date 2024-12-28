@@ -3,7 +3,7 @@ use crate::{
     executors::LC3,
     instruction::{
         args::{InstrOffset6, InstrPCOffset9},
-        get_bits, get_opcode, Instruction,
+        get_bits, get_opcode, Instruction, InstructionErr,
     },
 };
 
@@ -19,7 +19,7 @@ pub const STR_OPCODE: u8 = 0b0111;
 pub const ALL_STORE_OPCODES: [u8; 3] = [ST_OPCODE, STI_OPCODE, STR_OPCODE];
 
 impl Instruction for IStore {
-    fn execute<P: LC3>(self, processor: &mut P) {
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         match self {
             Self::Std(InstrPCOffset9 {
                 target_reg,
@@ -45,6 +45,8 @@ impl Instruction for IStore {
                 processor.set_mem(target_addr, processor.reg(target_reg));
             }
         }
+
+        Ok(())
     }
 
     fn parse(word: LC3Word) -> Option<Self>

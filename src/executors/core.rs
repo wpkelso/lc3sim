@@ -1,7 +1,4 @@
-use std::{
-    future::{ready, Ready},
-    iter::FusedIterator,
-};
+use std::iter::FusedIterator;
 
 use crate::defs::{
     LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, NUM_REGS, STACK_REG, SUPERVISOR_SP_INIT,
@@ -249,7 +246,7 @@ mod test {
             src_reg: const { RegAddr::panic_from_u8(0) },
             imm: 5,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 11)
     }
 
@@ -274,7 +271,7 @@ mod test {
             src_reg_1: const { RegAddr::panic_from_u8(0) },
             src_reg_2: const { RegAddr::panic_from_u8(3) },
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 16)
     }
 
@@ -299,7 +296,7 @@ mod test {
             src_reg: const { RegAddr::panic_from_u8(0) },
             imm: 0b0000000000000000,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 0b0000000000000000);
     }
 
@@ -324,7 +321,7 @@ mod test {
             src_reg_1: const { RegAddr::panic_from_u8(0) },
             src_reg_2: const { RegAddr::panic_from_u8(7) },
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 0b0000000000000000);
     }
 
@@ -357,7 +354,7 @@ mod test {
             dest_reg: const { RegAddr::panic_from_u8(1) },
             src_reg: const { RegAddr::panic_from_u8(0) },
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 0b1111111100000000);
     }
 
@@ -391,7 +388,7 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x0002); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
@@ -408,7 +405,7 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x0002); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
@@ -425,7 +422,7 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x0002); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
@@ -442,7 +439,7 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x0002); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
@@ -459,7 +456,7 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x0002); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
@@ -476,7 +473,7 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x0002); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
@@ -493,7 +490,7 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x0002); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
     }
@@ -518,13 +515,13 @@ mod test {
 
         for i in 0..8 {
             let test_instr = IJump::Instr(RegAddr::panic_from_u8(i));
-            test_instr.execute(&mut processor);
+            test_instr.execute(&mut processor).unwrap();
             assert_eq!(processor.pc, processor.regs[i as usize]);
         }
 
         processor.regs[7] = 0x3000;
         let test_instr: IJump = IJump::Ret;
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x3000);
     }
 
@@ -548,7 +545,7 @@ mod test {
 
         // JSR
         let test_instr = IJumpSubRoutine::Offset(InstrPCOffset11 { pc_offset: 0x0006 });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x3006);
         assert_eq!(processor.regs[7], 0x3000);
 
@@ -558,7 +555,7 @@ mod test {
 
         // JSRR
         let test_instr = IJumpSubRoutine::Reg(RegAddr::One);
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x000A);
         assert_eq!(processor.regs[7], 0x3000);
     }
@@ -587,7 +584,7 @@ mod test {
 
         //LD
         processor.mem[0x3006] = 0xFF14;
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[0], 0xFF14);
 
         // LDI
@@ -597,7 +594,7 @@ mod test {
             target_reg: const { RegAddr::panic_from_u8(1) },
             pc_offset: 0x0002,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 0xFF14);
 
         // LDR
@@ -608,7 +605,7 @@ mod test {
             base_reg: const { RegAddr::panic_from_u8(2) },
             offset: 0x0001,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[3], 0xFF14);
 
         // LEA
@@ -616,7 +613,7 @@ mod test {
             target_reg: const { RegAddr::panic_from_u8(4) },
             pc_offset: 0x000E,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[4], 0x300F);
     }
 
@@ -643,7 +640,7 @@ mod test {
             target_reg: const { RegAddr::panic_from_u8(0) },
             pc_offset: 0x0004,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.mem[0x3005], 0xFF14);
 
         // STI
@@ -652,7 +649,7 @@ mod test {
             target_reg: const { RegAddr::panic_from_u8(0) },
             pc_offset: 0x0002,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.mem[0x300A], 0xFF14);
 
         // STR
@@ -662,7 +659,7 @@ mod test {
             base_reg: const { RegAddr::panic_from_u8(1) },
             offset: 0x0003,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.mem[0x3006], 0xFF14);
     }
 

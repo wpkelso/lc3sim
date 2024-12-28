@@ -1,10 +1,8 @@
-use std::future::Future;
-
 use thiserror::Error;
 
 use crate::{
     defs::{LC3MemAddr, LC3Word, RegAddr, STACK_REG},
-    instruction::{Instruction, InstructionEnum},
+    instruction::{Instruction, InstructionEnum, InstructionErr, InsufficientPerms},
     util::format_word_bits,
 };
 
@@ -27,12 +25,20 @@ pub enum StepFailure {
         "{0} is not a valid LC3 instruction: {top_bits} is an invalid opcode.", top_bits = format_word_bits(*.0, 0)
     )]
     InvalidInstruction(LC3Word),
-    #[error("User mode attempted supervisor mode operation.")]
-    InsufficientPerms,
+    #[error(transparent)]
+    InsufficientPerms(InsufficientPerms),
     #[error("{max_addr} is the largest possible LC3 address, PC cannot advance further.", max_addr = LC3MemAddr::MAX)]
     LastAddress,
     #[error("The machine must be unhalted to progress")]
     Halted,
+}
+
+impl From<InstructionErr> for StepFailure {
+    fn from(value: InstructionErr) -> Self {
+        match value {
+            InstructionErr::InsufficientPerms(x) => Self::InsufficientPerms(x),
+        }
+    }
 }
 
 // LC3 condition mask/shift consts

@@ -1,7 +1,7 @@
 use crate::{
     defs::{LC3Word, RegAddr},
     executors::LC3,
-    instruction::{get_bits, get_opcode, Instruction},
+    instruction::{get_bits, get_opcode, Instruction, InstructionErr},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -15,7 +15,7 @@ pub const RTI_OPCODE: u8 = 0b1000;
 pub const ALL_JUMP_OPCODES: [u8; 2] = [JMP_OPCODE, RTI_OPCODE];
 
 impl Instruction for IJump {
-    fn execute<P: LC3>(self, processor: &mut P) {
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         let dest = match self {
             Self::Instr(base_reg) => base_reg,
             Self::Ret => RegAddr::Seven,
@@ -24,6 +24,7 @@ impl Instruction for IJump {
             }
         };
         processor.set_pc(processor.reg(dest));
+        Ok(())
     }
 
     fn parse(word: LC3Word) -> Option<Self>

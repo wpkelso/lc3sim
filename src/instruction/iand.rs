@@ -3,7 +3,7 @@ use crate::{
     executors::LC3,
     instruction::{
         args::{InstrRegImm, InstrRegReg},
-        get_bit, get_bits, get_opcode, set_condition_codes, Instruction,
+        get_bit, get_bits, get_opcode, set_condition_codes, Instruction, InstructionErr,
     },
 };
 
@@ -15,7 +15,7 @@ pub enum IAnd {
 pub const AND_OPCODE: u8 = 0b0101;
 
 impl Instruction for IAnd {
-    fn execute<P: LC3>(self, processor: &mut P) {
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         let dest;
         let result = match self {
             Self::Reg(InstrRegReg {
@@ -37,6 +37,7 @@ impl Instruction for IAnd {
         };
         processor.set_reg(dest, result);
         set_condition_codes(processor, result);
+        Ok(())
     }
 
     fn parse(word: LC3Word) -> Option<Self>

@@ -1,7 +1,7 @@
 use crate::{
     defs::LC3Word,
     executors::LC3,
-    instruction::{get_bits, get_opcode, Instruction},
+    instruction::{get_bits, get_opcode, Instruction, InstructionErr},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -21,7 +21,7 @@ const IN: u16 = 0x23;
 const HALT: u16 = 0x24;
 
 impl Instruction for Trap {
-    fn execute<P: LC3>(self, processor: &mut P) {
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         unimplemented!()
     }
 
