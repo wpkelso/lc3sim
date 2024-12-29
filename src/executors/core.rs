@@ -1,7 +1,10 @@
 use std::iter::FusedIterator;
 
-use crate::defs::{
-    LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, NUM_REGS, STACK_REG, SUPERVISOR_SP_INIT,
+use crate::{
+    defs::{
+        LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, NUM_REGS, STACK_REG, SUPERVISOR_SP_INIT,
+    },
+    instruction::Instruction,
 };
 
 use super::{LC3MemLoc, StepFailure, LC3};
@@ -160,8 +163,15 @@ impl LC3 for CoreLC3 {
         todo!()
     }
 
+    /// Executes the current instruction.
+    ///
+    /// Does not handle memory map updates.
     fn step(&mut self) -> Result<(), StepFailure> {
-        todo!()
+        let inst = self
+            .cur_inst()
+            .ok_or(StepFailure::InvalidInstruction(self.mem(self.pc())))?;
+
+        Ok(inst.execute(self)?)
     }
 
     fn populate<I: IntoIterator<Item = LC3Word>>(&mut self, start: LC3MemAddr, words: I) {
