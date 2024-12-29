@@ -1,5 +1,5 @@
 use crate::{
-    defs::LC3Word,
+    defs::{LC3Word, RegAddr},
     executors::LC3,
     instruction::{get_bits, get_opcode, Instruction, InstructionErr},
 };
@@ -22,7 +22,18 @@ const HALT: u16 = 0x24;
 
 impl Instruction for Trap {
     fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
-        unimplemented!()
+        let vector = match self {
+            Trap::Getc => GETC,
+            Trap::In => IN,
+            Trap::Out => OUT,
+            Trap::PutS => PUTS,
+            Trap::Halt => HALT,
+        };
+
+        processor.set_reg(RegAddr::Seven, processor.pc() + 1);
+        processor.set_pc(processor.mem(vector));
+
+        Ok(())
     }
 
     fn parse(word: LC3Word) -> Option<Self>
