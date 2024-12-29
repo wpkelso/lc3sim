@@ -44,6 +44,20 @@ impl Instruction for Trap {
     }
 }
 
+impl From<Trap> for LC3Word {
+    fn from(value: Trap) -> Self {
+        const BASE: LC3Word = (TRAP_OPCODE as LC3Word) << 12;
+
+        match value {
+            Trap::Getc => BASE | GETC,
+            Trap::In => BASE | IN,
+            Trap::Out => BASE | OUT,
+            Trap::PutS => BASE | PUTS,
+            Trap::Halt => BASE | HALT,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,5 +99,14 @@ mod tests {
         assert_eq!(Trap::parse(BASE_OPCODE | PUTS).unwrap(), Trap::PutS);
         assert_eq!(Trap::parse(BASE_OPCODE | IN).unwrap(), Trap::In);
         assert_eq!(Trap::parse(BASE_OPCODE | HALT).unwrap(), Trap::Halt);
+    }
+
+    #[test]
+    fn reconstruct() {
+        let valid_opcodes = ALL_VECS.into_iter().map(|vec| BASE_OPCODE | vec);
+
+        for valid in valid_opcodes {
+            assert_eq!(LC3Word::from(Trap::parse(valid).unwrap()), valid)
+        }
     }
 }

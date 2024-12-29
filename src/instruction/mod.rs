@@ -46,8 +46,7 @@ pub enum InstructionErr {
     InsufficientPerms(#[from] InsufficientPerms),
 }
 
-//pub trait Instruction: Into<LC3Word> {
-pub trait Instruction {
+pub trait Instruction: Into<LC3Word> {
     /// Run this instruction on `P`, producing all outputs and side effects.
     fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr>;
 
@@ -109,7 +108,6 @@ impl Instruction for InstructionEnum {
     }
 }
 
-/*
 impl From<InstructionEnum> for LC3Word {
     fn from(value: InstructionEnum) -> Self {
         match value {
@@ -125,10 +123,25 @@ impl From<InstructionEnum> for LC3Word {
         }
     }
 }
-*/
 
 #[cfg(test)]
 /// Utility value for calculating instruction range.
 ///
 /// Bottom opcode bit set.
 const TWELVE_SET: u16 = 1 << 12;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reconstruct() {
+        let all_possible_codes = TWELVE_SET..=LC3Word::MAX;
+
+        for code in all_possible_codes {
+            if let Some(parsed) = InstructionEnum::parse(code) {
+                assert_eq!(LC3Word::from(parsed), code)
+            }
+        }
+    }
+}

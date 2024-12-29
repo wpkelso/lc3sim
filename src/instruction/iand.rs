@@ -137,9 +137,9 @@ mod tests {
         // With immediate flag
         let base = BASE_OPCODE | BITMASK_5;
 
-        for dr in 0..7 {
+        for dr in 0..8 {
             let with_dr = base | (dr << 9);
-            for sr in 0..7 {
+            for sr in 0..8 {
                 let with_sr = with_dr | (sr << 6);
                 for imm in 0..0b11111 {
                     let full = with_sr | imm;
@@ -161,9 +161,9 @@ mod tests {
         // Without immediate flag
         let base = BASE_OPCODE;
 
-        for dr in 0..7 {
+        for dr in 0..8 {
             let with_dr = base | (dr << 9);
-            for sr1 in 0..7 {
+            for sr1 in 0..8 {
                 let with_sr = with_dr | (sr1 << 6);
                 for sr2 in 0..7 {
                     let full = with_sr | sr2;

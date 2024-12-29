@@ -106,3 +106,162 @@ impl Instruction for ILoad {
         }
     }
 }
+
+impl From<ILoad> for LC3Word {
+    fn from(value: ILoad) -> Self {
+        const LD_BASE: LC3Word = (LD_OPCODE as LC3Word) << 12;
+        const LDI_BASE: LC3Word = (LDI_OPCODE as LC3Word) << 12;
+        const LDR_BASE: LC3Word = (LDR_OPCODE as LC3Word) << 12;
+        const LEA_BASE: LC3Word = (LEA_OPCODE as LC3Word) << 12;
+
+        match value {
+            ILoad::Std(InstrPCOffset9 {
+                target_reg,
+                pc_offset,
+            }) => LD_BASE | (LC3Word::from(target_reg) << 9) | pc_offset,
+            ILoad::Indirect(InstrPCOffset9 {
+                target_reg,
+                pc_offset,
+            }) => LDI_BASE | (LC3Word::from(target_reg) << 9) | pc_offset,
+            ILoad::Reg(InstrOffset6 {
+                target_reg,
+                base_reg,
+                offset,
+            }) => {
+                LDR_BASE
+                    | (LC3Word::from(target_reg) << 9)
+                    | (LC3Word::from(base_reg) << 6)
+                    | offset
+            }
+            ILoad::Addr(InstrPCOffset9 {
+                target_reg,
+                pc_offset,
+            }) => LEA_BASE | (LC3Word::from(target_reg) << 9) | pc_offset,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reject_invalid_opcodes() {
+        // All other opcodes
+        let invalid_opcodes =
+            (0..LC3Word::MAX).filter(|word| !ALL_LOAD_OPCODES.contains(&((word >> 12) as u8)));
+
+        for invalid in invalid_opcodes {
+            assert!(ILoad::parse(invalid).is_none())
+        }
+    }
+
+    mod ld {
+        use super::*;
+
+        const BASE_OPCODE: u16 = (LD_OPCODE as u16) << 12;
+        const BITMASK_NINE: LC3Word = 1 << 9;
+
+        #[test]
+        fn parse() {
+            for dr in 0..8 {
+                let with_dr = BASE_OPCODE | (dr << 9);
+                for imm in 0..BITMASK_NINE {
+                    let full = with_dr | imm;
+
+                    if let ILoad::Std(parsed) = ILoad::parse(full).unwrap() {
+                        assert_eq!(parsed.target_reg as u16, dr);
+                        assert_eq!(parsed.pc_offset, imm);
+                    } else {
+                        panic!("Must parse as ld!")
+                    }
+                }
+            }
+        }
+    }
+
+    mod ldi {
+        use super::*;
+
+        const BASE_OPCODE: u16 = (LDI_OPCODE as u16) << 12;
+        const BITMASK_NINE: LC3Word = 1 << 9;
+
+        #[test]
+        fn parse() {
+            for dr in 0..8 {
+                let with_dr = BASE_OPCODE | (dr << 9);
+                for imm in 0..BITMASK_NINE {
+                    let full = with_dr | imm;
+
+                    if let ILoad::Indirect(parsed) = ILoad::parse(full).unwrap() {
+                        assert_eq!(parsed.target_reg as u16, dr);
+                        assert_eq!(parsed.pc_offset, imm);
+                    } else {
+                        panic!("Must parse as ldi!")
+                    }
+                }
+            }
+        }
+    }
+
+    mod lea {
+        use super::*;
+
+        const BASE_OPCODE: u16 = (LEA_OPCODE as u16) << 12;
+        const BITMASK_NINE: LC3Word = 1 << 9;
+
+        #[test]
+        fn parse() {
+            for dr in 0..8 {
+                let with_dr = BASE_OPCODE | (dr << 9);
+                for imm in 0..BITMASK_NINE {
+                    let full = with_dr | imm;
+
+                    if let ILoad::Addr(parsed) = ILoad::parse(full).unwrap() {
+                        assert_eq!(parsed.target_reg as u16, dr);
+                        assert_eq!(parsed.pc_offset, imm);
+                    } else {
+                        panic!("Must parse as lea!")
+                    }
+                }
+            }
+        }
+    }
+
+    mod ldr {
+        use super::*;
+
+        const BASE_OPCODE: u16 = (LDR_OPCODE as u16) << 12;
+
+        #[test]
+        fn parse() {
+            for dr in 0..8 {
+                let with_dr = BASE_OPCODE | (dr << 9);
+                for sr in 0..8 {
+                    let with_sr = with_dr | (sr << 6);
+                    for imm in 0..0b11111 {
+                        let full = with_sr | imm;
+
+                        if let ILoad::Reg(parsed) = ILoad::parse(full).unwrap() {
+                            assert_eq!(parsed.target_reg as u16, dr);
+                            assert_eq!(parsed.base_reg as u16, sr);
+                            assert_eq!(parsed.offset, imm);
+                        } else {
+                            panic!("Must parse as ldr!")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn reconstruct() {
+        let valid_opcodes =
+            (0..LC3Word::MAX).filter(|word| ALL_LOAD_OPCODES.contains(&((word >> 12) as u8)));
+
+        for valid in valid_opcodes {
+            assert_eq!(LC3Word::from(ILoad::parse(valid).unwrap()), valid)
+        }
+    }
+}

@@ -29,7 +29,7 @@ impl Instruction for INot {
     where
         Self: Sized,
     {
-        const TRAILING: u16 = 0b11111;
+        const TRAILING: u16 = 0b111111;
 
         if (get_opcode(word) == NOT_OPCODE) && (get_bits(word, 5, 0) == TRAILING) {
             // 3 bits is always a valid RegAddr
@@ -44,13 +44,23 @@ impl Instruction for INot {
     }
 }
 
+impl From<INot> for LC3Word {
+    fn from(value: INot) -> Self {
+        const OPCODE_BASE: LC3Word = (NOT_OPCODE as LC3Word) << 12;
+        const BOTTOM_FIVE: LC3Word = (1 << 6) - 1;
+        const BASE: LC3Word = OPCODE_BASE | BOTTOM_FIVE;
+
+        BASE | (LC3Word::from(value.0.dest_reg) << 9) | (LC3Word::from(value.0.src_reg) << 6)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::instruction::TWELVE_SET;
 
     use super::*;
 
-    const BOTTOM_FIVE: u16 = (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1) | 1;
+    const BOTTOM_FIVE: u16 = (1 << 6) - 1;
     const BASE_OPCODE: u16 = (NOT_OPCODE as u16) << 12;
 
     #[test]
@@ -79,9 +89,9 @@ mod tests {
         // Without immediate flag
         let base = BASE_OPCODE;
 
-        for dr in 0..7 {
+        for dr in 0..8 {
             let with_dr = base | (dr << 9);
-            for sr in 0..7 {
+            for sr in 0..8 {
                 let with_sr = with_dr | (sr << 6);
                 let full = with_sr | BOTTOM_FIVE;
 
@@ -89,6 +99,16 @@ mod tests {
                 assert_eq!(parsed.dest_reg as u16, dr);
                 assert_eq!(parsed.src_reg as u16, sr);
             }
+        }
+    }
+
+    #[test]
+    fn reconstruct() {
+        let valid_opcodes = (BASE_OPCODE..(BASE_OPCODE + TWELVE_SET))
+            .filter(|word| (word & BOTTOM_FIVE) == BOTTOM_FIVE);
+
+        for valid in valid_opcodes {
+            assert_eq!(LC3Word::from(INot::parse(valid).unwrap()), valid)
         }
     }
 }
