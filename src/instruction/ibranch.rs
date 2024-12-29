@@ -92,10 +92,8 @@ mod tests {
 
     #[test]
     fn parse() {
-        let base = BASE_OPCODE;
-
         for offset in 0..BITMASK_9 {
-            let with_offset = base | offset;
+            let with_offset = BASE_OPCODE | offset;
 
             for neg in [true, false] {
                 for zero in [true, false] {

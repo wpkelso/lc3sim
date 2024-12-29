@@ -75,6 +75,20 @@ impl Instruction for IJump {
     }
 }
 
+impl From<IJump> for LC3Word {
+    fn from(value: IJump) -> Self {
+        const JMP_BASE: LC3Word = (JMP_OPCODE as LC3Word) << 12;
+        const RET_FULL: LC3Word = JMP_BASE | (0b111 << 6);
+        const RTI_FULL: LC3Word = (RTI_OPCODE as LC3Word) << 12;
+
+        match value {
+            IJump::Instr(base_r) => JMP_BASE | (LC3Word::from(base_r) << 6),
+            IJump::Ret => RET_FULL,
+            IJump::InterRet => RTI_FULL,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::instruction::TWELVE_SET;
@@ -106,20 +120,14 @@ mod tests {
                 .filter(|word| (word & (BITMASK_11_9 | BITMASK_5_0)) != 0);
 
             for invalid in invalid_parses {
-                assert!(
-                    IJump::parse(invalid).is_none(),
-                    "{:?}",
-                    invalid.to_be_bytes()
-                )
+                assert!(IJump::parse(invalid).is_none(),)
             }
         }
 
         #[test]
         fn parse_reg() {
-            let base = BASE_OPCODE;
-
             for dr in 0..7 {
-                let full = base | (dr << 6);
+                let full = BASE_OPCODE | (dr << 6);
                 if let IJump::Instr(parsed) = IJump::parse(full).unwrap() {
                     assert_eq!(parsed as u16, dr);
                 } else {
@@ -128,15 +136,25 @@ mod tests {
             }
 
             let dr = 7;
-            let full = base | (dr << 6);
+            let full = BASE_OPCODE | (dr << 6);
             assert_eq!(IJump::parse(full).unwrap(), IJump::Ret);
+        }
+
+        #[test]
+        fn reconstruct() {
+            let valid_opcodes = (BASE_OPCODE..(BASE_OPCODE + TWELVE_SET))
+                .filter(|word| (word & (BITMASK_11_9 | BITMASK_5_0)) == 0);
+
+            for valid in valid_opcodes {
+                assert_eq!(LC3Word::from(IJump::parse(valid).unwrap()), valid)
+            }
         }
     }
 
     mod rti {
         use crate::{
-            defs::{IO_PRIORITY, KEYBOARD_INTERRUPT, SUPERVISOR_SP_INIT},
-            executors::core::CoreLC3,
+            defs::{IO_PRIORITY, KEYBOARD_INTERRUPT, SUPERVISOR_SP_INIT, USER_SPACE},
+            executors::{core::CoreLC3, StepFailure},
         };
 
         use super::*;
@@ -157,17 +175,26 @@ mod tests {
 
         #[test]
         fn full_jump() {
+            const INIT_STACK_REG: LC3Word = 63;
+            const { assert!(INIT_STACK_REG != (SUPERVISOR_SP_INIT - 2)) };
+
             let mut processor = CoreLC3::new();
             processor.set_privileged(false);
-            processor.set_reg(STACK_REG, 63);
+            processor.set_reg(STACK_REG, INIT_STACK_REG);
 
+            // Execute the original interrupt
             processor.interrupt(KEYBOARD_INTERRUPT, Some(IO_PRIORITY));
-
             assert!(processor.privileged());
             assert_eq!(processor.pc(), KEYBOARD_INTERRUPT + 0x0100);
             assert_eq!(processor.reg(STACK_REG), SUPERVISOR_SP_INIT - 2);
 
-            todo!("Missing op to LC3 word conversion")
+            // Execute the return jump
+            processor.set_mem(processor.pc(), IJump::InterRet.into());
+            processor.step().unwrap();
+
+            assert_eq!(processor.pc(), USER_SPACE);
+            assert_eq!(processor.reg(STACK_REG), INIT_STACK_REG);
+            assert!(!processor.privileged());
         }
 
         #[test]
@@ -175,7 +202,20 @@ mod tests {
             let mut processor = CoreLC3::new();
             processor.set_privileged(false);
 
-            todo!("Missing op to LC3 word conversion")
+            // Fail this instruction due to insufficient perms
+            processor.set_mem(processor.pc(), IJump::InterRet.into());
+            assert!(matches!(
+                processor.step(),
+                Err(StepFailure::InsufficientPerms(_))
+            ));
+        }
+
+        #[test]
+        fn reconstruct() {
+            assert_eq!(
+                LC3Word::from(IJump::parse(BASE_OPCODE).unwrap()),
+                BASE_OPCODE
+            )
         }
     }
 }
