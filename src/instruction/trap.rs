@@ -6,11 +6,12 @@ use crate::{
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Trap {
-    Getc, // 0x20
-    Out,  // 0x21
-    PutS, // 0x22
-    In,   // 0x23
-    Halt, // 0x24
+    Getc,  // 0x20
+    Out,   // 0x21
+    PutS,  // 0x22
+    In,    // 0x23
+    PutSp, // 0x24
+    Halt,  // 0x25
 }
 pub const TRAP_OPCODE: u8 = 0b1111;
 
@@ -18,16 +19,21 @@ const GETC: u16 = 0x20;
 const OUT: u16 = 0x21;
 const PUTS: u16 = 0x22;
 const IN: u16 = 0x23;
-const HALT: u16 = 0x24;
+const PUTSP: u16 = 0x24;
+const HALT: u16 = 0x25;
 
 impl Instruction for Trap {
     fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         let vector = match self {
             Trap::Getc => GETC,
-            Trap::In => IN,
             Trap::Out => OUT,
             Trap::PutS => PUTS,
-            Trap::Halt => HALT,
+            Trap::In => IN,
+            Trap::PutSp => PUTSP,
+            Trap::Halt => {
+                processor.halt();
+                HALT
+            }
         };
 
         processor.set_reg(RegAddr::Seven, processor.pc() + 1);
@@ -46,6 +52,7 @@ impl Instruction for Trap {
                 OUT => Some(Self::Out),
                 PUTS => Some(Self::PutS),
                 IN => Some(Self::In),
+                PUTSP => Some(Self::PutSp),
                 HALT => Some(Self::Halt),
                 _ => None,
             }
@@ -61,9 +68,10 @@ impl From<Trap> for LC3Word {
 
         match value {
             Trap::Getc => BASE | GETC,
-            Trap::In => BASE | IN,
             Trap::Out => BASE | OUT,
             Trap::PutS => BASE | PUTS,
+            Trap::In => BASE | IN,
+            Trap::PutSp => BASE | PUTSP,
             Trap::Halt => BASE | HALT,
         }
     }
@@ -75,7 +83,7 @@ mod tests {
 
     const BASE_OPCODE: u16 = (TRAP_OPCODE as u16) << 12;
 
-    const ALL_VECS: [u16; 5] = [GETC, OUT, PUTS, IN, HALT];
+    const ALL_VECS: [u16; 6] = [GETC, OUT, PUTS, IN, PUTSP, HALT];
 
     const FULL_11: u16 = (1 << 12) - 1;
     const BITMASK_11_8: u16 = (FULL_11 >> 8) << 8;
