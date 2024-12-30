@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use thiserror::Error;
 
 use crate::{
@@ -177,6 +179,23 @@ pub trait LC3 {
 
     /// Fill the lines from `start` with `words`.
     fn populate<I: IntoIterator<Item = LC3Word>>(&mut self, start: LC3MemAddr, words: I);
+}
+
+/// Populates the processor from a binary provider.
+///
+/// Invalid binary data is silently discarded.
+pub fn populate_from_bin<P: LC3, R: Read>(processor: &mut P, bin: R) {
+    let mut bytes = bin.bytes();
+
+    let mut next_pair = || {
+        let first = bytes.next()?.ok()?;
+        let second = bytes.next()?.ok()?;
+        Some(LC3Word::from_be_bytes([first, second]))
+    };
+
+    if let Some(start) = next_pair() {
+        processor.populate(start, std::iter::from_fn(next_pair));
+    }
 }
 
 #[cfg(test)]

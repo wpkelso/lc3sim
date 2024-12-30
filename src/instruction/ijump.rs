@@ -153,7 +153,7 @@ mod tests {
 
     mod rti {
         use crate::{
-            defs::{IO_PRIORITY, KEYBOARD_INTERRUPT, SUPERVISOR_SP_INIT},
+            defs::{IO_PRIORITY, KEYBOARD_INTERRUPT, OS_SUPER_STACK, SUPERVISOR_SP_INIT},
             executors::{core::CoreLC3, StepFailure},
         };
 
@@ -192,7 +192,7 @@ mod tests {
             processor.set_mem(processor.pc(), IJump::InterRet.into());
             processor.step().unwrap();
 
-            assert_eq!(processor.pc(), 0x0000);
+            assert_eq!(processor.pc(), OS_SUPER_STACK);
             assert_eq!(processor.reg(STACK_REG), INIT_STACK_REG);
             assert!(!processor.privileged());
         }

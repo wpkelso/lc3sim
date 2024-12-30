@@ -15,4 +15,13 @@ name = "lc3sim"
 path = "src/cli.rs"
 
 [dependencies]
+# To reduce error boilerplate
 thiserror = "2"
+
+[dev-dependencies]
+# To reduce getter boilerplate
+derive-getters = "0.5"
+# More efficient map initialization
+once_map = "0.4"
+# Random tempfile names
+uuid = { version = "1", features = ["v4"] }

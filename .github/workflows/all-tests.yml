@@ -28,6 +28,10 @@ jobs:
     - uses: Swatinem/rust-cache@v2
     - uses: taiki-e/install-action@cargo-llvm-cov
 
+    - uses: awalsh128/cache-apt-pkgs-action@v1
+      with:
+        packages: default-jre
+
     - name: Regular Tests
       run: cargo llvm-cov test --no-report --tests --all-features
 
@@ -70,7 +74,7 @@ jobs:
 
     - uses: awalsh128/cache-apt-pkgs-action@v1
       with:
-        packages: libsodium-dev
+        packages: default-jre
 
     - uses: dtolnay/rust-toolchain@stable
     - uses: Swatinem/rust-cache@v2
@@ -132,6 +136,11 @@ jobs:
       if: ${{ matrix.triple }}
       with:
         target: ${{ matrix.triple }}
+
+    - uses: awalsh128/cache-apt-pkgs-action@v1
+      if: ${{ matrix.os == 'ubuntu' }}
+      with:
+        packages: default-jre
 
     - uses: Swatinem/rust-cache@v2
 

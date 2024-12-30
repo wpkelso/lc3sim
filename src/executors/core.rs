@@ -2,7 +2,8 @@ use std::iter::FusedIterator;
 
 use crate::{
     defs::{
-        LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, NUM_REGS, STACK_REG, SUPERVISOR_SP_INIT,
+        LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, NUM_REGS, OS_SUPER_STACK, STACK_REG,
+        SUPERVISOR_SP_INIT,
     },
     instruction::Instruction,
 };
@@ -40,7 +41,7 @@ impl CoreLC3 {
             privileged: false,
             supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([0; NUM_REGS]),
-            pc: 0x0000,
+            pc: OS_SUPER_STACK,
         }
     }
 }
