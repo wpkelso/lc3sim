@@ -29,8 +29,14 @@ mod exec {
             assert_eq!(lc3.mem(pos), word);
         }
 
-        assert_eq!(lc3.pc(), 0x0200);
-
+        // Step all the way through execution
         step_continue(&mut IgnoreIO, &mut lc3).unwrap();
+
+        // Confirm full memory match with penn-sim
+        let (output, mem_lines) = mult_10.post_process_mem_dump("");
+        assert_eq!(output, "");
+        for (lc3_mem, penn_mem) in lc3.iter().zip(mem_lines) {
+            assert_eq!(lc3_mem, penn_mem)
+        }
     }
 }

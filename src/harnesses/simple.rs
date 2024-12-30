@@ -15,11 +15,6 @@ pub struct IgnoreIO;
 
 impl SyncHarness for IgnoreIO {
     fn step<P: LC3>(&mut self, processor: &mut P) -> Result<(), ExecutionFailure> {
-        println!(
-            "PC, Inst: {:#x}, {:?}",
-            processor.pc(),
-            processor.cur_inst().unwrap()
-        );
         Ok(processor.step()?)
     }
 }

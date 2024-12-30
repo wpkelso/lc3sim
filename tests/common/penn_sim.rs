@@ -3,7 +3,7 @@ use std::{
     ffi::{OsStr, OsString},
     fs::{self, create_dir_all, read_to_string, File},
     hash::Hash,
-    io::{BufReader, Read, Write},
+    io::{BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
     process::Command,
     sync::LazyLock,
@@ -11,7 +11,7 @@ use std::{
 
 use derive_getters::Getters;
 use lc3sim_project::{
-    defs::LC3Word,
+    defs::{LC3Word, DEV_REG_ADDR},
     executors::{populate_from_bin, LC3},
 };
 use once_map::OnceMap;
@@ -122,6 +122,86 @@ impl CompileSet {
         };
 
         std::iter::from_fn(next_pair)
+    }
+
+    /// Get output lines and final memory after a pennsim run.
+    pub fn post_process_mem_dump<S: AsRef<str>>(
+        &self,
+        input: S,
+    ) -> (String, [LC3Word; DEV_REG_ADDR as usize]) {
+        // Create the temporary directory
+        let temp_dir = temp_dir().join(Uuid::new_v4().to_string());
+        create_dir_all(&temp_dir).unwrap();
+
+        // Create the temp obj file path
+        let obj_path = temp_dir.join("program.obj");
+        let _ = File::create_new(&obj_path).unwrap().write_all(&self.obj);
+
+        // Create the temp OS obj file path
+        let os_obj_path = temp_dir.join("lc3os.obj");
+        let _ = File::create_new(&os_obj_path).unwrap().write_all(OS.obj());
+
+        // Create the dump file path
+        let dump_path = temp_dir.join("dump.log");
+
+        // Create the temp OS obj file path
+        let input_path = temp_dir.join("input.txt");
+        let _ = File::create_new(&input_path)
+            .unwrap()
+            .write_all(input.as_ref().as_bytes());
+
+        let script_path = temp_dir.join("script");
+        let _ = File::create_new(&script_path).unwrap().write_all(
+            ("ld ".to_string()
+                + os_obj_path.to_str().unwrap()
+                + "\nld "
+                + obj_path.to_str().unwrap()
+                + "\ninput "
+                + input_path.to_str().unwrap()
+                + "\ncontinue"
+                + "\ndump x0 xFE00 "
+                + dump_path.to_str().unwrap()
+                + "\nquit\n")
+                .as_bytes(),
+        );
+
+        let cmd_output = String::from_utf8(
+            Command::new("java")
+                .args([
+                    "-jar",
+                    "penn_sim/PennSim.jar",
+                    "-t",
+                    "-s",
+                    script_path.to_str().unwrap(),
+                ])
+                .output()
+                .unwrap()
+                .stdout,
+        )
+        .unwrap();
+
+        // Trim output to exclude the pennsim header and footer
+        let mut output_lines = cmd_output.lines();
+        output_lines
+            .by_ref()
+            .take_while(|x| *x != "use the 'stop' command to interrupt execution")
+            .for_each(|_| ());
+        let cmd_output = output_lines
+            .take_while(|x| *x != "Memory dumped.")
+            .collect();
+
+        let mut out = [0; DEV_REG_ADDR as usize];
+        BufReader::new(File::open(dump_path).unwrap())
+            .lines()
+            .zip(out.as_mut())
+            .for_each(|(line, out)| {
+                *out = LC3Word::from_str_radix(line.unwrap().trim_start_matches("x"), 16).unwrap()
+            });
+
+        // Clean up the temporary directory
+        fs::remove_dir_all(&temp_dir).unwrap();
+
+        (cmd_output, out)
     }
 }
 
