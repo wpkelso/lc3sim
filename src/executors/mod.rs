@@ -33,6 +33,8 @@ pub enum StepFailure {
     LastAddress,
     #[error("The machine must be unhalted to progress")]
     Halted,
+    #[error("The MCR control bit was cleared, disabling the clock")]
+    ClockDisabled,
 }
 
 impl From<InstructionErr> for StepFailure {

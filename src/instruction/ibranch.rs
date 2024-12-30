@@ -23,6 +23,8 @@ impl Instruction for IBranch {
 
         if pos_condition || zero_condition || neg_condition {
             processor.set_pc(processor.pc() + self.pc_offset);
+        } else {
+            processor.set_pc(processor.pc() + 1);
         }
 
         Ok(())

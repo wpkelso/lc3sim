@@ -11,6 +11,7 @@ mod exec {
     use lc3sim_project::{
         defs::{LC3MemAddr, USER_SPACE},
         executors::{core::CoreLC3, populate_from_bin, LC3MemLoc, LC3},
+        harnesses::{simple::IgnoreIO, sync::step_continue},
         util::format_all_word_bits,
     };
 
@@ -29,5 +30,7 @@ mod exec {
         }
 
         assert_eq!(lc3.pc(), 0x0200);
+
+        step_continue(&mut IgnoreIO, &mut lc3).unwrap();
     }
 }
