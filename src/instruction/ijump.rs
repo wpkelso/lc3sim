@@ -8,8 +8,9 @@ use super::InsufficientPerms;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IJump {
-    Instr(RegAddr), //not strictly an offset6, but doesn't matter here
-    Ret,            //RET and RETI are included here, as they are functionally special cases of JMP
+    Instr(RegAddr),
+    PrivClear(RegAddr), // Clears privilege bit
+    Ret, //RET and RETI are included here, as they are functionally special cases of JMP
     InterRet,
 }
 pub const JMP_OPCODE: u8 = 0b1100;
@@ -20,6 +21,10 @@ impl Instruction for IJump {
     fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         let dest = match self {
             Self::Instr(base_reg) => processor.reg(base_reg),
+            Self::PrivClear(base_reg) => {
+                processor.set_privileged(false);
+                processor.reg(base_reg)
+            }
             Self::Ret => processor.reg(RegAddr::Seven),
             Self::InterRet => {
                 if !processor.privileged() {
@@ -50,10 +55,12 @@ impl Instruction for IJump {
     {
         match get_opcode(word) {
             JMP_OPCODE => {
-                if (get_bits(word, 11, 9) == 0) && (get_bits(word, 5, 0) == 0) {
+                if (get_bits(word, 11, 9) == 0) && (get_bits(word, 5, 1) == 0) {
                     let dest = RegAddr::panic_from_u16(get_bits(word, 8, 6));
 
-                    if dest == RegAddr::Seven {
+                    if get_bits(word, 0, 0) == 1 {
+                        Some(Self::PrivClear(dest))
+                    } else if dest == RegAddr::Seven {
                         Some(Self::Ret)
                     } else {
                         Some(Self::Instr(dest))
@@ -83,6 +90,7 @@ impl From<IJump> for LC3Word {
 
         match value {
             IJump::Instr(base_r) => JMP_BASE | (LC3Word::from(base_r) << 6),
+            IJump::PrivClear(base_r) => JMP_BASE | (LC3Word::from(base_r) << 6) | 1,
             IJump::Ret => RET_FULL,
             IJump::InterRet => RTI_FULL,
         }
@@ -112,15 +120,15 @@ mod tests {
         const BASE_OPCODE: u16 = (JMP_OPCODE as u16) << 12;
 
         const BITMASK_11_9: u16 = 0b111 << 9;
-        const BITMASK_5_0: u16 = (1 << 6) - 1;
+        const BITMASK_5_1: u16 = ((1 << 5) - 1) << 1;
 
         #[test]
         fn reject_invalid_parses() {
             let invalid_parses = (BASE_OPCODE..(BASE_OPCODE + TWELVE_SET))
-                .filter(|word| (word & (BITMASK_11_9 | BITMASK_5_0)) != 0);
+                .filter(|word| (word & (BITMASK_11_9 | BITMASK_5_1)) != 0);
 
             for invalid in invalid_parses {
-                assert!(IJump::parse(invalid).is_none(),)
+                assert!(IJump::parse(invalid).is_none())
             }
         }
 
@@ -141,9 +149,27 @@ mod tests {
         }
 
         #[test]
+        fn parse_special() {
+            let base = BASE_OPCODE | 1;
+
+            for dr in 0..7 {
+                let full = base | (dr << 6);
+                if let IJump::PrivClear(parsed) = IJump::parse(full).unwrap() {
+                    assert_eq!(parsed as u16, dr);
+                } else {
+                    panic!("Must parse as privilege clear!")
+                }
+            }
+
+            let dr = 7;
+            let full = BASE_OPCODE | (dr << 6);
+            assert_eq!(IJump::parse(full).unwrap(), IJump::Ret);
+        }
+
+        #[test]
         fn reconstruct() {
             let valid_opcodes = (BASE_OPCODE..(BASE_OPCODE + TWELVE_SET))
-                .filter(|word| (word & (BITMASK_11_9 | BITMASK_5_0)) == 0);
+                .filter(|word| (word & (BITMASK_11_9 | BITMASK_5_1)) == 0);
 
             for valid in valid_opcodes {
                 assert_eq!(LC3Word::from(IJump::parse(valid).unwrap()), valid)

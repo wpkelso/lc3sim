@@ -2,10 +2,10 @@ use std::iter::FusedIterator;
 
 use crate::{
     defs::{
-        LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, NUM_REGS, OS_SUPER_STACK, STACK_REG,
-        SUPERVISOR_SP_INIT,
+        LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, MACHINE_CONTROL_REGISTER, NUM_REGS,
+        OS_SUPER_STACK, STACK_REG, SUPERVISOR_SP_INIT,
     },
-    instruction::Instruction,
+    instruction::{Instruction, InstructionEnum},
 };
 
 use super::{LC3MemLoc, StepFailure, LC3};
@@ -26,6 +26,8 @@ pub struct CoreLC3 {
     regs: Box<[LC3Word; NUM_REGS]>,
     supervisor_sp: LC3Word,
     pc: LC3MemAddr,
+    halted: bool,
+    mpr_disabled: bool,
 }
 
 impl CoreLC3 {
@@ -38,10 +40,12 @@ impl CoreLC3 {
                 positive: false,
             },
             priority: 0,
-            privileged: false,
+            privileged: true,
             supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([0; NUM_REGS]),
             pc: OS_SUPER_STACK,
+            halted: false,
+            mpr_disabled: false,
         }
     }
 }
@@ -84,6 +88,9 @@ impl LC3 for CoreLC3 {
     }
     fn set_mem(&mut self, addr: LC3MemAddr, value: LC3Word) {
         self.mem[addr as usize] = value;
+        if addr == MACHINE_CONTROL_REGISTER {
+            self.mpr_disabled = (value & (1 << 15)) == 0;
+        }
     }
 
     fn priority(&self) -> u8 {
@@ -153,26 +160,40 @@ impl LC3 for CoreLC3 {
     }
 
     fn halt(&mut self) {
-        todo!()
+        self.halted = true;
     }
 
     fn unhalt(&mut self) {
-        todo!()
+        self.halted = false;
     }
 
     fn is_halted(&self) -> bool {
-        todo!()
+        self.halted
     }
 
     /// Executes the current instruction.
     ///
     /// Does not handle memory map updates.
     fn step(&mut self) -> Result<(), StepFailure> {
-        let inst = self
-            .cur_inst()
-            .ok_or(StepFailure::InvalidInstruction(self.mem(self.pc())))?;
+        if self.halted {
+            Err(StepFailure::Halted)
+        } else if self.mpr_disabled {
+            Err(StepFailure::ClockDisabled)
+        } else {
+            let inst = self
+                .cur_inst()
+                .ok_or(StepFailure::InvalidInstruction(self.mem(self.pc())))?;
 
-        Ok(inst.execute(self)?)
+            inst.execute(self)?;
+
+            if !matches!(inst, InstructionEnum::IBranch(_))
+                && !matches!(inst, InstructionEnum::IJump(_))
+            {
+                self.pc += 1;
+            }
+
+            Ok(())
+        }
     }
 
     fn populate<I: IntoIterator<Item = LC3Word>>(&mut self, start: LC3MemAddr, words: I) {
@@ -250,6 +271,8 @@ mod test {
             supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 18]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         let test_instr = IAdd::Imm(InstrRegImm {
@@ -275,6 +298,8 @@ mod test {
             supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 18]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         let test_instr = IAdd::Reg(InstrRegReg {
@@ -300,6 +325,8 @@ mod test {
             supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 0]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         let test_instr = IAnd::Imm(InstrRegImm {
@@ -325,6 +352,8 @@ mod test {
             supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 0]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         let test_instr = IAnd::Reg(InstrRegReg {
@@ -359,6 +388,8 @@ mod test {
             privileged: false,
             supervisor_sp: SUPERVISOR_SP_INIT,
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         let test_instr = INot(InstrRegOnly {
@@ -383,6 +414,8 @@ mod test {
             supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([0, 0, 0, 0, 0, 0, 0, 0]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         //there are more clever ways to write this, I don't feel like writing them
@@ -522,6 +555,8 @@ mod test {
                 0x3000, 0x0000, 0x1000, 0x0200, 0xff00, 0xfe00, 0x3000, 0x7301,
             ]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         for i in 0..8 {
@@ -552,6 +587,8 @@ mod test {
                 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
             pc: 0x3000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         // JSR
@@ -587,6 +624,8 @@ mod test {
                 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
             pc: 0x3000,
+            halted: false,
+            mpr_disabled: false,
         };
         let test_instr: ILoad = ILoad::Std(InstrPCOffset9 {
             target_reg: const { RegAddr::panic_from_u8(0) },
@@ -644,6 +683,8 @@ mod test {
                 0xFF14, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
             pc: 0x3000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         // ST
