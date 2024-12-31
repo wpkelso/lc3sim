@@ -1,5 +1,5 @@
 use crate::{
-    defs::{LC3MemAddr, LC3Word, RegAddr, SignedLC3Word},
+    defs::{LC3MemAddr, LC3Word, RegAddr},
     executors::LC3,
     instruction::{
         args::{InstrOffset6, InstrPCOffset9},
@@ -254,6 +254,8 @@ mod tests {
     }
 
     mod ldr {
+        use crate::defs::SignedLC3Word;
+
         use super::*;
 
         const BASE_OPCODE: u16 = (LDR_OPCODE as u16) << 12;

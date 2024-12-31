@@ -9,10 +9,6 @@ use std::{
 use lc3sim_project::{
     defs::{LC3Word, RegAddr},
     executors::{core::CoreLC3, populate_from_bin, LC3},
-    harnesses::{
-        simple::IgnoreIO,
-        sync::{lim_step_continue, step_continue},
-    },
 };
 
 fn main() {

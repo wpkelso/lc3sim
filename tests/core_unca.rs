@@ -1,8 +1,5 @@
 mod common;
 
-use std::sync::LazyLock;
-
-use common::penn_sim::CompileSet;
 use paste::paste;
 
 mod exec {
@@ -11,7 +8,7 @@ mod exec {
     use common::penn_sim::load_os;
     use lc3sim_project::{
         defs::{LC3MemAddr, USER_SPACE},
-        executors::{core::CoreLC3, populate_from_bin, LC3MemLoc, LC3},
+        executors::{core::CoreLC3, populate_from_bin, LC3},
         harnesses::{simple::FailIO, sync::lim_step_continue},
     };
 

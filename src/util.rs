@@ -22,9 +22,9 @@ pub fn format_all_word_bits(word: LC3Word) -> String {
 #[inline]
 pub const fn apply_offset(value: LC3MemAddr, offset: SignedLC3Word) -> LC3MemAddr {
     if offset < 0 {
-        value.wrapping_sub(offset.abs() as LC3MemAddr)
+        value.wrapping_sub(offset.unsigned_abs())
     } else {
-        value.wrapping_add(offset.abs() as LC3MemAddr)
+        value.wrapping_add(offset.unsigned_abs())
     }
 }
 
