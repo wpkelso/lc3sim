@@ -107,7 +107,7 @@ jobs:
 
     - name: Test for MSRV in Cargo.toml
       run: |
-        VERSION="$(cargo metadata --format-version 1 | jq '.packages | .[] | select(.name == "lc3sim")| .version' | tr -d '"')"
+        VERSION="$(cargo metadata --format-version 1 | jq '.packages | .[] | select(.name == "lc3sim")| .rust_version' | tr -d '"')"
         cargo hack check --version-range "$VERSION" --all-targets --all-features --ignore-private
 
   test:
