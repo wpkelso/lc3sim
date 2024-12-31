@@ -2,15 +2,16 @@ use crate::{
     defs::{LC3Word, RegAddr},
     executors::LC3,
     instruction::{
-        args::{InstrRegImm, InstrRegReg},
+        args::{InstrRegReg, InstrRegSignedImm},
         get_bits, get_opcode, set_condition_codes, Instruction, InstructionErr,
     },
+    util::{apply_offset, shift_to_signed, shift_to_unsigned},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IAdd {
     Reg(InstrRegReg),
-    Imm(InstrRegImm),
+    Imm(InstrRegSignedImm),
 }
 pub const ADD_OPCODE: u8 = 0b0001;
 
@@ -24,15 +25,17 @@ impl Instruction for IAdd {
                 src_reg_2,
             }) => {
                 dest = dest_reg;
-                processor.reg(src_reg_1) + processor.reg(src_reg_2)
+                processor
+                    .reg(src_reg_1)
+                    .wrapping_add(processor.reg(src_reg_2))
             }
-            Self::Imm(InstrRegImm {
+            Self::Imm(InstrRegSignedImm {
                 dest_reg,
                 src_reg,
                 imm,
             }) => {
                 dest = dest_reg;
-                processor.reg(src_reg) + imm
+                apply_offset(processor.reg(src_reg), imm)
             }
         };
         processor.set_reg(dest, result);
@@ -62,10 +65,10 @@ impl Instruction for IAdd {
                     None
                 }
             } else {
-                Some(Self::Imm(InstrRegImm {
+                Some(Self::Imm(InstrRegSignedImm {
                     dest_reg,
                     src_reg: src_reg_1,
-                    imm: get_bits(word, 4, 0),
+                    imm: shift_to_signed::<{ LC3Word::BITS - 5 }>(get_bits(word, 4, 0)),
                 }))
             }
         } else {
@@ -85,11 +88,15 @@ impl From<IAdd> for LC3Word {
                 src_reg_1,
                 src_reg_2,
             }) => (dest_reg, src_reg_1, src_reg_2.into()),
-            IAdd::Imm(InstrRegImm {
+            IAdd::Imm(InstrRegSignedImm {
                 dest_reg,
                 src_reg,
                 imm,
-            }) => (dest_reg, src_reg, IMM_SET | imm),
+            }) => (
+                dest_reg,
+                src_reg,
+                IMM_SET | shift_to_unsigned::<{ LC3Word::BITS - 5 }>(imm),
+            ),
         };
 
         let with_dest = BASE | (LC3Word::from(dest) << 9);
@@ -147,7 +154,7 @@ mod tests {
                     if let IAdd::Imm(parsed) = IAdd::parse(full).unwrap() {
                         assert_eq!(parsed.dest_reg as u16, dr);
                         assert_eq!(parsed.src_reg as u16, sr);
-                        assert_eq!(parsed.imm, imm);
+                        assert_eq!(parsed.imm, shift_to_signed::<{ LC3Word::BITS - 5 }>(imm));
                     } else {
                         panic!("Must parse as immediate!")
                     }

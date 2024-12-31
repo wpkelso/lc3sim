@@ -4,6 +4,7 @@ use crate::{
     instruction::{
         args::InstrPCOffset11, get_bit, get_bits, get_opcode, Instruction, InstructionErr,
     },
+    util::{apply_offset, shift_to_signed, shift_to_unsigned},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -19,7 +20,7 @@ impl Instruction for IJumpSubRoutine {
         let jump_addr = match self {
             Self::Offset(InstrPCOffset11 { pc_offset }) => {
                 //JSR
-                processor.pc() + pc_offset
+                apply_offset(processor.pc(), pc_offset)
             }
             Self::Reg(base_reg) => {
                 //JSRR
@@ -38,7 +39,7 @@ impl Instruction for IJumpSubRoutine {
         if get_opcode(word) == JSR_OPCODE {
             if get_bit(word, 11) == 1 {
                 Some(Self::Offset(InstrPCOffset11 {
-                    pc_offset: get_bits(word, 10, 0),
+                    pc_offset: shift_to_signed::<{ LC3Word::BITS - 11 }>(get_bits(word, 10, 0)),
                 }))
             } else if (get_bits(word, 11, 9) == 0) && (get_bits(word, 5, 0) == 0) {
                 Some(Self::Reg(RegAddr::panic_from_u16(get_bits(word, 8, 6))))
@@ -57,7 +58,9 @@ impl From<IJumpSubRoutine> for LC3Word {
 
         match value {
             IJumpSubRoutine::Reg(reg) => JSR_BASE | (LC3Word::from(reg) << 6),
-            IJumpSubRoutine::Offset(offset) => JSR_BASE | (1 << 11) | offset.pc_offset,
+            IJumpSubRoutine::Offset(offset) => {
+                JSR_BASE | (1 << 11) | shift_to_unsigned::<{ LC3Word::BITS - 11 }>(offset.pc_offset)
+            }
         }
     }
 }
@@ -114,7 +117,10 @@ mod tests {
         for offset in 0..(1 << 11) {
             let full = base | offset;
             if let IJumpSubRoutine::Offset(parsed) = IJumpSubRoutine::parse(full).unwrap() {
-                assert_eq!(parsed.pc_offset, offset);
+                assert_eq!(
+                    parsed.pc_offset,
+                    shift_to_signed::<{ LC3Word::BITS - 11 }>(offset)
+                );
             } else {
                 panic!("Must parse as register!")
             }

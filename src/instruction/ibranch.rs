@@ -1,9 +1,10 @@
 use crate::{
-    defs::LC3Word,
+    defs::{LC3Word, SignedLC3Word},
     executors::LC3,
     instruction::{
         args::ConditionCodes, get_bit, get_bits, get_opcode, Instruction, InstructionErr,
     },
+    util::{apply_offset, shift_to_signed, shift_to_unsigned},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -11,7 +12,7 @@ pub struct IBranch {
     //while br roughly follows the bit assignment of PCoffset9,
     //this is treated as a special case for ease of implementation
     pub cond_codes: ConditionCodes,
-    pub pc_offset: u16,
+    pub pc_offset: SignedLC3Word,
 }
 pub const BRANCH_OPCODE: u8 = 0b0000;
 
@@ -21,8 +22,10 @@ impl Instruction for IBranch {
         let zero_condition = self.cond_codes.zero && processor.zero_cond();
         let neg_condition = self.cond_codes.negative && processor.negative_cond();
 
+        let next_pc = processor.pc() + 1;
+
         if pos_condition || zero_condition || neg_condition {
-            processor.set_pc(processor.pc() + self.pc_offset);
+            processor.set_pc(apply_offset(next_pc, self.pc_offset));
         } else {
             processor.set_pc(processor.pc() + 1);
         }
@@ -41,7 +44,7 @@ impl Instruction for IBranch {
                 zero: get_bit(word, 10) == 1,
             };
 
-            let pc_offset = get_bits(word, 8, 0);
+            let pc_offset = shift_to_signed::<{ LC3Word::BITS - 9 }>(get_bits(word, 8, 0));
 
             Some(Self {
                 cond_codes,
@@ -69,7 +72,7 @@ impl From<IBranch> for LC3Word {
             with_cond |= 1 << 9;
         }
 
-        with_cond | value.pc_offset
+        with_cond | (shift_to_unsigned::<{ LC3Word::BITS - 9 }>(value.pc_offset))
     }
 }
 
@@ -80,12 +83,13 @@ mod tests {
     use super::*;
 
     const BITMASK_9: u16 = 1 << 9;
-    const BASE_OPCODE: u16 = (BRANCH_OPCODE as u16) << 12;
+    const BASE_OPCODE: u16 = (BRANCH_OPCODE as LC3Word) << 12;
 
     #[test]
     fn reject_invalid_opcodes() {
         // All other opcodes
-        let invalid_opcodes = (0..LC3Word::MAX).filter(|word| (word >> 12) != BRANCH_OPCODE as u16);
+        let invalid_opcodes =
+            (0..LC3Word::MAX).filter(|word| (word >> 12) != BRANCH_OPCODE as LC3Word);
 
         for invalid in invalid_opcodes {
             assert!(IBranch::parse(invalid).is_none())
@@ -116,7 +120,7 @@ mod tests {
                             pc_offset,
                         } = IBranch::parse(full).unwrap();
 
-                        assert_eq!(pc_offset, offset);
+                        assert_eq!(pc_offset, shift_to_signed::<{ LC3Word::BITS - 9 }>(offset));
                         assert_eq!(cond_codes.negative, neg);
                         assert_eq!(cond_codes.zero, zero);
                         assert_eq!(cond_codes.positive, pos);

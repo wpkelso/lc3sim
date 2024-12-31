@@ -1,10 +1,11 @@
 use crate::{
-    defs::{LC3Word, RegAddr},
+    defs::{LC3MemAddr, LC3Word, RegAddr, SignedLC3Word},
     executors::LC3,
     instruction::{
         args::{InstrOffset6, InstrPCOffset9},
         get_bits, get_opcode, set_condition_codes, Instruction, InstructionErr,
     },
+    util::{apply_offset, shift_to_signed, shift_to_unsigned},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -23,12 +24,14 @@ pub const ALL_LOAD_OPCODES: [u8; 4] = [LD_OPCODE, LDI_OPCODE, LDR_OPCODE, LEA_OP
 impl Instruction for ILoad {
     fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         let result;
+        let advanced_addr: LC3MemAddr = processor.pc().wrapping_add(1);
+
         match self {
             Self::Std(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
             }) => {
-                let target_addr: u16 = processor.pc() + 1 + pc_offset;
+                let target_addr = apply_offset(advanced_addr, pc_offset);
                 result = processor.mem(target_addr);
                 processor.set_reg(target_reg, result);
             }
@@ -36,7 +39,7 @@ impl Instruction for ILoad {
                 target_reg,
                 pc_offset,
             }) => {
-                let target_addr: u16 = processor.pc() + 1 + pc_offset;
+                let target_addr = apply_offset(advanced_addr, pc_offset);
                 let target_loc: u16 = processor.mem(target_addr);
                 result = processor.mem(target_loc);
                 processor.set_reg(target_reg, result);
@@ -46,7 +49,7 @@ impl Instruction for ILoad {
                 base_reg,
                 offset,
             }) => {
-                let target_addr = processor.reg(base_reg) + offset;
+                let target_addr = apply_offset(processor.reg(base_reg), offset);
                 result = processor.mem(target_addr);
                 processor.set_reg(target_reg, result);
             }
@@ -54,7 +57,7 @@ impl Instruction for ILoad {
                 target_reg,
                 pc_offset,
             }) => {
-                result = processor.pc() + 1 + pc_offset;
+                result = apply_offset(advanced_addr, pc_offset);
                 processor.set_reg(target_reg, result);
             }
         }
@@ -73,7 +76,8 @@ impl Instruction for ILoad {
         let opcode = get_opcode(word);
         match opcode {
             LD_OPCODE | LDI_OPCODE | LEA_OPCODE => {
-                let pc_offset = get_bits(word, 8, 0);
+                // Shifting sign extends negative numbers
+                let pc_offset = shift_to_signed::<{ LC3Word::BITS - 9 }>(get_bits(word, 8, 0));
 
                 match opcode {
                     LD_OPCODE => Some(Self::Std(InstrPCOffset9 {
@@ -93,7 +97,7 @@ impl Instruction for ILoad {
             }
             LDR_OPCODE => {
                 let base_reg = RegAddr::panic_from_u16(get_bits(word, 8, 6));
-                let offset = get_bits(word, 5, 0);
+                let offset = shift_to_signed::<{ LC3Word::BITS - 6 }>(get_bits(word, 5, 0));
 
                 Some(Self::Reg(InstrOffset6 {
                     target_reg,
@@ -118,11 +122,19 @@ impl From<ILoad> for LC3Word {
             ILoad::Std(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
-            }) => LD_BASE | (LC3Word::from(target_reg) << 9) | pc_offset,
+            }) => {
+                LD_BASE
+                    | (LC3Word::from(target_reg) << 9)
+                    | shift_to_unsigned::<{ LC3Word::BITS - 9 }>(pc_offset)
+            }
             ILoad::Indirect(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
-            }) => LDI_BASE | (LC3Word::from(target_reg) << 9) | pc_offset,
+            }) => {
+                LDI_BASE
+                    | (LC3Word::from(target_reg) << 9)
+                    | shift_to_unsigned::<{ LC3Word::BITS - 9 }>(pc_offset)
+            }
             ILoad::Reg(InstrOffset6 {
                 target_reg,
                 base_reg,
@@ -131,12 +143,16 @@ impl From<ILoad> for LC3Word {
                 LDR_BASE
                     | (LC3Word::from(target_reg) << 9)
                     | (LC3Word::from(base_reg) << 6)
-                    | offset
+                    | shift_to_unsigned::<{ LC3Word::BITS - 6 }>(offset)
             }
             ILoad::Addr(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
-            }) => LEA_BASE | (LC3Word::from(target_reg) << 9) | pc_offset,
+            }) => {
+                LEA_BASE
+                    | (LC3Word::from(target_reg) << 9)
+                    | shift_to_unsigned::<{ LC3Word::BITS - 9 }>(pc_offset)
+            }
         }
     }
 }
@@ -171,7 +187,10 @@ mod tests {
 
                     if let ILoad::Std(parsed) = ILoad::parse(full).unwrap() {
                         assert_eq!(parsed.target_reg as u16, dr);
-                        assert_eq!(parsed.pc_offset, imm);
+                        assert_eq!(
+                            parsed.pc_offset,
+                            shift_to_signed::<{ LC3Word::BITS - 9 }>(imm)
+                        );
                     } else {
                         panic!("Must parse as ld!")
                     }
@@ -195,7 +214,10 @@ mod tests {
 
                     if let ILoad::Indirect(parsed) = ILoad::parse(full).unwrap() {
                         assert_eq!(parsed.target_reg as u16, dr);
-                        assert_eq!(parsed.pc_offset, imm);
+                        assert_eq!(
+                            parsed.pc_offset,
+                            shift_to_signed::<{ LC3Word::BITS - 9 }>(imm)
+                        );
                     } else {
                         panic!("Must parse as ldi!")
                     }
@@ -219,7 +241,10 @@ mod tests {
 
                     if let ILoad::Addr(parsed) = ILoad::parse(full).unwrap() {
                         assert_eq!(parsed.target_reg as u16, dr);
-                        assert_eq!(parsed.pc_offset, imm);
+                        assert_eq!(
+                            parsed.pc_offset,
+                            shift_to_signed::<{ LC3Word::BITS - 9 }>(imm)
+                        );
                     } else {
                         panic!("Must parse as lea!")
                     }
@@ -245,7 +270,7 @@ mod tests {
                         if let ILoad::Reg(parsed) = ILoad::parse(full).unwrap() {
                             assert_eq!(parsed.target_reg as u16, dr);
                             assert_eq!(parsed.base_reg as u16, sr);
-                            assert_eq!(parsed.offset, imm);
+                            assert_eq!(parsed.offset, imm as SignedLC3Word);
                         } else {
                             panic!("Must parse as ldr!")
                         }

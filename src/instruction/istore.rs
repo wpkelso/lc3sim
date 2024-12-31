@@ -1,10 +1,11 @@
 use crate::{
-    defs::{LC3Word, RegAddr},
+    defs::{LC3MemAddr, LC3Word, RegAddr},
     executors::LC3,
     instruction::{
         args::{InstrOffset6, InstrPCOffset9},
         get_bits, get_opcode, Instruction, InstructionErr,
     },
+    util::{apply_offset, shift_to_signed, shift_to_unsigned},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -20,19 +21,21 @@ pub const ALL_STORE_OPCODES: [u8; 3] = [ST_OPCODE, STI_OPCODE, STR_OPCODE];
 
 impl Instruction for IStore {
     fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
+        let advanced_addr: LC3MemAddr = processor.pc().wrapping_add(1);
+
         match self {
             Self::Std(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
             }) => {
-                let target_addr: u16 = processor.pc() + 1 + pc_offset;
+                let target_addr = apply_offset(advanced_addr, pc_offset);
                 processor.set_mem(target_addr, processor.reg(target_reg));
             }
             Self::Indirect(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
             }) => {
-                let calc_addr: u16 = processor.pc() + 1 + pc_offset;
+                let calc_addr = apply_offset(advanced_addr, pc_offset);
                 let target_addr: u16 = processor.mem(calc_addr);
                 processor.set_mem(target_addr, processor.reg(target_reg));
             }
@@ -41,7 +44,7 @@ impl Instruction for IStore {
                 base_reg,
                 offset,
             }) => {
-                let target_addr: u16 = processor.reg(base_reg) + offset;
+                let target_addr = apply_offset(processor.reg(base_reg), offset);
                 processor.set_mem(target_addr, processor.reg(target_reg));
             }
         }
@@ -58,7 +61,7 @@ impl Instruction for IStore {
         let opcode = get_opcode(word);
         match opcode {
             ST_OPCODE | STI_OPCODE => {
-                let pc_offset = get_bits(word, 8, 0);
+                let pc_offset = shift_to_signed::<{ LC3Word::BITS - 9 }>(get_bits(word, 8, 0));
 
                 match opcode {
                     ST_OPCODE => Some(Self::Std(InstrPCOffset9 {
@@ -74,7 +77,7 @@ impl Instruction for IStore {
             }
             STR_OPCODE => {
                 let base_reg = RegAddr::panic_from_u16(get_bits(word, 8, 6));
-                let offset = get_bits(word, 5, 0);
+                let offset = shift_to_signed::<{ LC3Word::BITS - 6 }>(get_bits(word, 5, 0));
 
                 Some(Self::Reg(InstrOffset6 {
                     target_reg,
@@ -98,11 +101,19 @@ impl From<IStore> for LC3Word {
             IStore::Std(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
-            }) => ST_BASE | (LC3Word::from(target_reg) << 9) | pc_offset,
+            }) => {
+                ST_BASE
+                    | (LC3Word::from(target_reg) << 9)
+                    | shift_to_unsigned::<{ LC3Word::BITS - 9 }>(pc_offset)
+            }
             IStore::Indirect(InstrPCOffset9 {
                 target_reg,
                 pc_offset,
-            }) => STI_BASE | (LC3Word::from(target_reg) << 9) | pc_offset,
+            }) => {
+                STI_BASE
+                    | (LC3Word::from(target_reg) << 9)
+                    | shift_to_unsigned::<{ LC3Word::BITS - 9 }>(pc_offset)
+            }
             IStore::Reg(InstrOffset6 {
                 target_reg,
                 base_reg,
@@ -111,7 +122,7 @@ impl From<IStore> for LC3Word {
                 STR_BASE
                     | (LC3Word::from(target_reg) << 9)
                     | (LC3Word::from(base_reg) << 6)
-                    | offset
+                    | shift_to_unsigned::<{ LC3Word::BITS - 6 }>(offset)
             }
         }
     }
@@ -147,7 +158,10 @@ mod tests {
 
                     if let IStore::Std(parsed) = IStore::parse(full).unwrap() {
                         assert_eq!(parsed.target_reg as u16, dr);
-                        assert_eq!(parsed.pc_offset, imm);
+                        assert_eq!(
+                            parsed.pc_offset,
+                            shift_to_signed::<{ LC3Word::BITS - 9 }>(imm)
+                        );
                     } else {
                         panic!("Must parse as st!")
                     }
@@ -171,7 +185,10 @@ mod tests {
 
                     if let IStore::Indirect(parsed) = IStore::parse(full).unwrap() {
                         assert_eq!(parsed.target_reg as u16, dr);
-                        assert_eq!(parsed.pc_offset, imm);
+                        assert_eq!(
+                            parsed.pc_offset,
+                            shift_to_signed::<{ LC3Word::BITS - 9 }>(imm)
+                        );
                     } else {
                         panic!("Must parse as sti!")
                     }
@@ -191,13 +208,16 @@ mod tests {
                 let with_dr = BASE_OPCODE | (dr << 9);
                 for sr in 0..8 {
                     let with_sr = with_dr | (sr << 6);
-                    for imm in 0..0b11111 {
+                    for imm in 0..(1 << 6) {
                         let full = with_sr | imm;
 
                         if let IStore::Reg(parsed) = IStore::parse(full).unwrap() {
                             assert_eq!(parsed.target_reg as u16, dr);
                             assert_eq!(parsed.base_reg as u16, sr);
-                            assert_eq!(parsed.offset, imm);
+                            assert_eq!(
+                                parsed.offset,
+                                shift_to_signed::<{ LC3Word::BITS - 6 }>(imm)
+                            );
                         } else {
                             panic!("Must parse as str!")
                         }

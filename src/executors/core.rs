@@ -275,7 +275,7 @@ mod test {
             mpr_disabled: false,
         };
 
-        let test_instr = IAdd::Imm(InstrRegImm {
+        let test_instr = IAdd::Imm(InstrRegSignedImm {
             dest_reg: const { RegAddr::panic_from_u8(1) },
             src_reg: const { RegAddr::panic_from_u8(0) },
             imm: 5,
@@ -433,7 +433,7 @@ mod test {
             pc_offset: 0x0002,
         };
         test_instr.execute(&mut processor).unwrap();
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -450,7 +450,7 @@ mod test {
             pc_offset: 0x0002,
         };
         test_instr.execute(&mut processor).unwrap();
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -467,7 +467,7 @@ mod test {
             pc_offset: 0x0002,
         };
         test_instr.execute(&mut processor).unwrap();
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -484,7 +484,7 @@ mod test {
             pc_offset: 0x0002,
         };
         test_instr.execute(&mut processor).unwrap();
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -501,7 +501,7 @@ mod test {
             pc_offset: 0x0002,
         };
         test_instr.execute(&mut processor).unwrap();
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -518,7 +518,7 @@ mod test {
             pc_offset: 0x0002,
         };
         test_instr.execute(&mut processor).unwrap();
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -535,7 +535,7 @@ mod test {
             pc_offset: 0x0002,
         };
         test_instr.execute(&mut processor).unwrap();
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
     }
 

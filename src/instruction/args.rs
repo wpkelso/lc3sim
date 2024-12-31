@@ -1,4 +1,11 @@
-use crate::defs::{LC3Word, RegAddr};
+use crate::defs::{LC3Word, RegAddr, SignedLC3Word};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct InstrRegSignedImm {
+    pub dest_reg: RegAddr,
+    pub src_reg: RegAddr,
+    pub imm: SignedLC3Word,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct InstrRegImm {
@@ -24,18 +31,18 @@ pub struct InstrRegOnly {
 pub struct InstrOffset6 {
     pub target_reg: RegAddr,
     pub base_reg: RegAddr,
-    pub offset: u16,
+    pub offset: SignedLC3Word,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct InstrPCOffset9 {
     pub target_reg: RegAddr,
-    pub pc_offset: u16,
+    pub pc_offset: SignedLC3Word,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct InstrPCOffset11 {
-    pub pc_offset: u16,
+    pub pc_offset: SignedLC3Word,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
