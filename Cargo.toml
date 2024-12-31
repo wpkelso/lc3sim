@@ -23,5 +23,7 @@ thiserror = "2"
 derive-getters = "0.5"
 # More efficient map initialization
 once_map = "0.4"
+# Reducing test writing boilerplate via macro
+paste = "1"
 # Random tempfile names
 uuid = { version = "1", features = ["v4"] }
