@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/defs.rs`."><title>defs.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-46132b98.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="lc3sim_project" data-themes="" data-resource-suffix="" data-rustdoc-version="1.85.0-nightly (917bfa784 2024-12-26)" data-channel="nightly" data-search-js="search-036cda7a.js" data-settings-js="settings-0f613d39.js" ><script src="../../static.files/storage-59e33391.js"></script><script defer src="../../static.files/src-script-56102188.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">lc3sim_project/</div>defs.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/defs.rs`."><title>defs.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-46132b98.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="lc3sim_project" data-themes="" data-resource-suffix="" data-rustdoc-version="1.85.0-nightly (45d11e51b 2025-01-01)" data-channel="nightly" data-search-js="search-036cda7a.js" data-settings-js="settings-0f613d39.js" ><script src="../../static.files/storage-59e33391.js"></script><script defer src="../../static.files/src-script-56102188.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">lc3sim_project/</div>defs.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -130,24 +130,84 @@
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a></pre></div><pre class="rust"><code><span class="kw">use </span>thiserror::Error;
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a></pre></div><pre class="rust"><code><span class="kw">use </span>thiserror::Error;
 
 <span class="kw">pub type </span>LC3Word = u16;
 <span class="kw">pub type </span>SignedLC3Word = i16;
 <span class="kw">pub type </span>LC3MemAddr = u16;
 
-<span class="kw">pub const </span>ADDR_SPACE_SIZE: usize = <span class="number">2_usize</span>.pow(<span class="number">16_u32</span>); <span class="comment">//size of the memory address space
-</span><span class="kw">pub const </span>TRAP_VEC_TBL: LC3Word = <span class="number">0x0000</span>; <span class="comment">//first address of the trap vector table
-</span><span class="kw">pub const </span>IR_VEC_TBL: LC3Word = <span class="number">0x0100</span>; <span class="comment">//first address of the interrupt vector table
-</span><span class="kw">pub const </span>OS_SUPER_STACK: LC3Word = <span class="number">0x0200</span>; <span class="comment">//first address of the operating and supervisor
-                                            //stack space
-</span><span class="kw">pub const </span>USER_SPACE: LC3Word = <span class="number">0x3000</span>; <span class="comment">//first address of the user code space
-</span><span class="kw">pub const </span>DEV_REG_ADDR: LC3Word = <span class="number">0xFE00</span>; <span class="comment">//first address of the device register address
-                                          //space
+<span class="doccomment">/// Size of the memory address space.
+</span><span class="kw">pub const </span>ADDR_SPACE_SIZE: usize = <span class="number">2_usize</span>.pow(<span class="number">16_u32</span>);
+<span class="doccomment">/// First address of the trap vector table.
+</span><span class="kw">pub const </span>TRAP_VEC_TBL: LC3Word = <span class="number">0x0000</span>;
+<span class="doccomment">/// First address of the interrupt vector table.
+</span><span class="kw">pub const </span>IR_VEC_TBL: LC3Word = <span class="number">0x0100</span>;
+<span class="doccomment">/// First address of the operating and supervisor stack space.
+</span><span class="kw">pub const </span>OS_SUPER_STACK: LC3Word = <span class="number">0x0200</span>;
+<span class="doccomment">/// First address of the user code space.
+</span><span class="kw">pub const </span>USER_SPACE: LC3Word = <span class="number">0x3000</span>;
+<span class="doccomment">/// First address of the device register address space.
+</span><span class="kw">pub const </span>DEV_REG_ADDR: LC3Word = <span class="number">0xFE00</span>;
 
-</span><span class="kw">pub const </span>NUM_REGS: usize = <span class="number">8_usize</span>; <span class="comment">//number of registers in the LC3 spec
+<span class="doccomment">/// Initial supervisor stack pointer value.
+</span><span class="kw">pub const </span>SUPERVISOR_SP_INIT: LC3Word = USER_SPACE - <span class="number">1</span>;
 
-</span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+<span class="doccomment">/// Vector for a keyboard I/O interrupt.
+</span><span class="kw">pub const </span>KEYBOARD_INTERRUPT: LC3Word = <span class="number">0x0080</span>;
+<span class="doccomment">/// Priority for an I/O interrupt
+</span><span class="kw">pub const </span>IO_PRIORITY: u8 = <span class="number">4</span>;
+
+<span class="doccomment">/// Register with a special stack meaning in privileged mode.
+</span><span class="kw">pub const </span>STACK_REG: RegAddr = RegAddr::Six;
+
+<span class="doccomment">/// Bit 15 is 1 when the keyboard has received a new character.
+</span><span class="kw">pub const </span>KEYBOARD_STATUS_REGISTER: LC3Word = <span class="number">0xFE00</span>;
+<span class="doccomment">/// Last character typed on the keyboard.
+</span><span class="kw">pub const </span>KEYBOARD_DATA_REGISTER: LC3Word = <span class="number">0xFE02</span>;
+<span class="doccomment">/// Bit 15 is 1 when the display is ready to receive a new character.
+</span><span class="kw">pub const </span>DISPLAY_STATUS_REGISTER: LC3Word = <span class="number">0xFE04</span>;
+<span class="doccomment">/// Characters written to this low byte will be displayed on screen.
+</span><span class="kw">pub const </span>DISPLAY_DATA_REGISTER: LC3Word = <span class="number">0xFE06</span>;
+<span class="doccomment">/// Bit 15 is clock enable -- machine runs while set to 1.
+</span><span class="kw">pub const </span>MACHINE_CONTROL_REGISTER: LC3Word = <span class="number">0xFFFE</span>;
+
+<span class="doccomment">/// Number of registers in the LC3 spec
+</span><span class="kw">pub const </span>NUM_REGS: usize = <span class="number">8_usize</span>;
+
+<span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 </span><span class="kw">pub enum </span>RegAddr {
     Zero,
     One,
@@ -222,6 +282,12 @@
 <span class="kw">impl </span>From&lt;RegAddr&gt; <span class="kw">for </span>usize {
     <span class="kw">fn </span>from(value: RegAddr) -&gt; <span class="self">Self </span>{
         u8::from(value) <span class="kw">as </span>usize
+    }
+}
+
+<span class="kw">impl </span>From&lt;RegAddr&gt; <span class="kw">for </span>u16 {
+    <span class="kw">fn </span>from(value: RegAddr) -&gt; <span class="self">Self </span>{
+        u8::from(value) <span class="kw">as </span>u16
     }
 }
 

@@ -1,0 +1,1 @@
+searchState.loadedDescShard("testcli", 0, "CLI for pure LC3 testing purposes.")

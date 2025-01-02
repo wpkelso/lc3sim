@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["StepFailure"],"mod":["core"],"struct":["LC3MemLoc"],"trait":["LC3"]};
+window.SIDEBAR_ITEMS = {"enum":["StepFailure"],"fn":["populate_from_bin"],"mod":["core"],"struct":["LC3MemLoc"],"trait":["LC3"]};
