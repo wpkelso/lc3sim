@@ -1,4 +1,5 @@
 use thiserror::Error;
+use strum_macros::EnumDiscriminants;
 
 pub type LC3Word = u16;
 pub type SignedLC3Word = i16;
@@ -93,7 +94,7 @@ impl From<RegAddr> for usize {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumDiscriminants)]
 pub enum Op {
     ADD,
     AND,
@@ -121,7 +122,7 @@ pub enum Op {
     ILLEGAL,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, EnumDiscriminants)]
 pub enum PseudoOp {
     ORIG,
     FILL,

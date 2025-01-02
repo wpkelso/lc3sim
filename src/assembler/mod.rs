@@ -1,3 +1,5 @@
+use strum::EnumIs;
+use strum_macros::EnumDiscriminants;
 use crate::defs::{LC3Word, Op, PseudoOp, RegAddr};
 
 pub mod tokenizer;
@@ -9,7 +11,7 @@ pub struct MaybeUnresolvedInstr {
     bindings: Option<(String, u8, u8)>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, EnumIs, EnumDiscriminants)]
 pub enum Token {
     INSTR(Op),
     REGISTER(RegAddr),
