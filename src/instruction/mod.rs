@@ -13,6 +13,7 @@ pub(crate) use ijumpsr::JSR_OPCODE;
 pub(crate) use iload::ALL_LOAD_OPCODES;
 pub(crate) use inot::NOT_OPCODE;
 pub(crate) use istore::ALL_STORE_OPCODES;
+use thiserror::Error;
 pub(crate) use trap::TRAP_OPCODE;
 use util::*;
 
@@ -35,9 +36,19 @@ pub use istore::IStore;
 mod trap;
 pub use trap::Trap;
 
-pub trait Instruction {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Error)]
+#[error("User mode attempted supervisor mode operation.")]
+pub struct InsufficientPerms;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Error)]
+pub enum InstructionErr {
+    #[error(transparent)]
+    InsufficientPerms(#[from] InsufficientPerms),
+}
+
+pub trait Instruction: Into<LC3Word> {
     /// Run this instruction on `P`, producing all outputs and side effects.
-    fn execute<P: LC3>(self, processor: &mut P);
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr>;
 
     /// Convert the word into this instruction, if possible.
     fn parse(word: LC3Word) -> Option<Self>
@@ -63,7 +74,7 @@ pub enum InstructionEnum {
 }
 
 impl Instruction for InstructionEnum {
-    fn execute<P: LC3>(self, processor: &mut P) {
+    fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {
         match self {
             Self::IAdd(x) => x.execute(processor),
             Self::IAnd(x) => x.execute(processor),
@@ -97,8 +108,40 @@ impl Instruction for InstructionEnum {
     }
 }
 
+impl From<InstructionEnum> for LC3Word {
+    fn from(value: InstructionEnum) -> Self {
+        match value {
+            InstructionEnum::IAdd(x) => x.into(),
+            InstructionEnum::IAnd(x) => x.into(),
+            InstructionEnum::INot(x) => x.into(),
+            InstructionEnum::IBranch(x) => x.into(),
+            InstructionEnum::IJump(x) => x.into(),
+            InstructionEnum::IJumpSubRoutine(x) => x.into(),
+            InstructionEnum::ILoad(x) => x.into(),
+            InstructionEnum::IStore(x) => x.into(),
+            InstructionEnum::Trap(x) => x.into(),
+        }
+    }
+}
+
 #[cfg(test)]
 /// Utility value for calculating instruction range.
 ///
 /// Bottom opcode bit set.
 const TWELVE_SET: u16 = 1 << 12;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reconstruct() {
+        let all_possible_codes = TWELVE_SET..=LC3Word::MAX;
+
+        for code in all_possible_codes {
+            if let Some(parsed) = InstructionEnum::parse(code) {
+                assert_eq!(LC3Word::from(parsed), code)
+            }
+        }
+    }
+}

@@ -2,10 +2,8 @@ use anyhow::{bail, Result};
 use once_cell::sync::Lazy;
 use regex::{bytes::RegexSet, Regex};
 
-use crate::defs::{Op, PseudoOp, RegAddr};
 use crate::assembler::Token;
-
-
+use crate::defs::{Op, PseudoOp, RegAddr};
 
 // This follows the same ordering as defs.rs > pub enum Op
 const INSTR_PATTERN: [&str; 23] = [

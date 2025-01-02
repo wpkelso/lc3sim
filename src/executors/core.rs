@@ -1,6 +1,12 @@
 use std::iter::FusedIterator;
 
-use crate::defs::{LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, NUM_REGS};
+use crate::{
+    defs::{
+        LC3MemAddr, LC3Word, RegAddr, ADDR_SPACE_SIZE, MACHINE_CONTROL_REGISTER, NUM_REGS,
+        OS_SUPER_STACK, STACK_REG, SUPERVISOR_SP_INIT,
+    },
+    instruction::{Instruction, InstructionEnum},
+};
 
 use super::{LC3MemLoc, StepFailure, LC3};
 
@@ -15,8 +21,13 @@ struct ConditionReg {
 pub struct CoreLC3 {
     mem: Box<[LC3Word; ADDR_SPACE_SIZE]>,
     conds: ConditionReg,
+    priority: u8,
+    privileged: bool,
     regs: Box<[LC3Word; NUM_REGS]>,
+    supervisor_sp: LC3Word,
     pc: LC3MemAddr,
+    halted: bool,
+    mpr_disabled: bool,
 }
 
 impl CoreLC3 {
@@ -28,8 +39,13 @@ impl CoreLC3 {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: true,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([0; NUM_REGS]),
-            pc: 0x0000,
+            pc: OS_SUPER_STACK,
+            halted: false,
+            mpr_disabled: false,
         }
     }
 }
@@ -49,10 +65,22 @@ impl LC3 for CoreLC3 {
     }
 
     fn reg(&self, addr: RegAddr) -> LC3Word {
-        self.regs[usize::from(addr)]
+        let reg_addr = usize::from(addr);
+
+        if self.privileged && reg_addr == STACK_REG.into() {
+            self.supervisor_sp
+        } else {
+            self.regs[reg_addr]
+        }
     }
     fn set_reg(&mut self, addr: RegAddr, value: LC3Word) {
-        self.regs[usize::from(addr)] = value
+        let reg_addr = usize::from(addr);
+
+        if self.privileged && reg_addr == STACK_REG.into() {
+            self.supervisor_sp = value
+        } else {
+            self.regs[reg_addr] = value
+        }
     }
 
     fn mem(&self, addr: LC3MemAddr) -> LC3Word {
@@ -60,6 +88,25 @@ impl LC3 for CoreLC3 {
     }
     fn set_mem(&mut self, addr: LC3MemAddr, value: LC3Word) {
         self.mem[addr as usize] = value;
+        if addr == MACHINE_CONTROL_REGISTER {
+            self.mpr_disabled = (value & (1 << 15)) == 0;
+        }
+    }
+
+    fn priority(&self) -> u8 {
+        self.priority
+    }
+    fn set_priority(&mut self, priority: u8) {
+        if priority < 8 {
+            self.priority = priority
+        }
+    }
+
+    fn privileged(&self) -> bool {
+        self.privileged
+    }
+    fn set_privileged(&mut self, priviledged: bool) {
+        self.privileged = priviledged
     }
 
     fn positive_cond(&self) -> bool {
@@ -94,6 +141,14 @@ impl LC3 for CoreLC3 {
         }
     }
 
+    fn clear_flags(&mut self) {
+        self.conds = ConditionReg {
+            negative: false,
+            zero: false,
+            positive: false,
+        }
+    }
+
     type FullIter<'a> = std::iter::Cloned<std::slice::Iter<'a, LC3Word>>;
     fn iter(&self) -> Self::FullIter<'_> {
         self.mem.iter().cloned()
@@ -105,19 +160,40 @@ impl LC3 for CoreLC3 {
     }
 
     fn halt(&mut self) {
-        todo!()
+        self.halted = true;
     }
 
     fn unhalt(&mut self) {
-        todo!()
+        self.halted = false;
     }
 
     fn is_halted(&self) -> bool {
-        todo!()
+        self.halted
     }
 
+    /// Executes the current instruction.
+    ///
+    /// Does not handle memory map updates.
     fn step(&mut self) -> Result<(), StepFailure> {
-        todo!()
+        if self.halted {
+            Err(StepFailure::Halted)
+        } else if self.mpr_disabled {
+            Err(StepFailure::ClockDisabled)
+        } else {
+            let inst = self
+                .cur_inst()
+                .ok_or(StepFailure::InvalidInstruction(self.mem(self.pc())))?;
+
+            inst.execute(self)?;
+
+            if !matches!(inst, InstructionEnum::IBranch(_))
+                && !matches!(inst, InstructionEnum::IJump(_))
+            {
+                self.pc += 1;
+            }
+
+            Ok(())
+        }
     }
 
     fn populate<I: IntoIterator<Item = LC3Word>>(&mut self, start: LC3MemAddr, words: I) {
@@ -190,16 +266,21 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 18]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
-        let test_instr = IAdd::Imm(InstrRegImm {
+        let test_instr = IAdd::Imm(InstrRegSignedImm {
             dest_reg: const { RegAddr::panic_from_u8(1) },
             src_reg: const { RegAddr::panic_from_u8(0) },
             imm: 5,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 11)
     }
 
@@ -212,8 +293,13 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 18]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         let test_instr = IAdd::Reg(InstrRegReg {
@@ -221,7 +307,7 @@ mod test {
             src_reg_1: const { RegAddr::panic_from_u8(0) },
             src_reg_2: const { RegAddr::panic_from_u8(3) },
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 16)
     }
 
@@ -234,8 +320,13 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 0]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         let test_instr = IAnd::Imm(InstrRegImm {
@@ -243,7 +334,7 @@ mod test {
             src_reg: const { RegAddr::panic_from_u8(0) },
             imm: 0b0000000000000000,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 0b0000000000000000);
     }
 
@@ -256,8 +347,13 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([6, 4, 7, 10, 24, 8, 9, 0]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         let test_instr = IAnd::Reg(InstrRegReg {
@@ -265,7 +361,7 @@ mod test {
             src_reg_1: const { RegAddr::panic_from_u8(0) },
             src_reg_2: const { RegAddr::panic_from_u8(7) },
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 0b0000000000000000);
     }
 
@@ -288,14 +384,19 @@ mod test {
                 0b0101010101010101,
                 0b1010101010101010,
             ]),
+            priority: 0,
+            privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         let test_instr = INot(InstrRegOnly {
             dest_reg: const { RegAddr::panic_from_u8(1) },
             src_reg: const { RegAddr::panic_from_u8(0) },
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 0b1111111100000000);
     }
 
@@ -308,8 +409,13 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([0, 0, 0, 0, 0, 0, 0, 0]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         //there are more clever ways to write this, I don't feel like writing them
@@ -326,8 +432,8 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        test_instr.execute(&mut processor).unwrap();
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -343,8 +449,8 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        test_instr.execute(&mut processor).unwrap();
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -360,8 +466,8 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        test_instr.execute(&mut processor).unwrap();
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -377,8 +483,8 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        test_instr.execute(&mut processor).unwrap();
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -394,8 +500,8 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        test_instr.execute(&mut processor).unwrap();
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -411,8 +517,8 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        test_instr.execute(&mut processor).unwrap();
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
 
         processor.conds = ConditionReg {
@@ -428,8 +534,8 @@ mod test {
             },
             pc_offset: 0x0002,
         };
-        test_instr.execute(&mut processor);
-        assert_eq!(processor.pc, 0x0002); //branch should've been taken
+        test_instr.execute(&mut processor).unwrap();
+        assert_eq!(processor.pc, 0x0003); //branch should've been taken
         processor.pc = 0x0000; //reset pc for next test
     }
 
@@ -442,21 +548,26 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([
                 0x3000, 0x0000, 0x1000, 0x0200, 0xff00, 0xfe00, 0x3000, 0x7301,
             ]),
             pc: 0x0000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         for i in 0..8 {
             let test_instr = IJump::Instr(RegAddr::panic_from_u8(i));
-            test_instr.execute(&mut processor);
+            test_instr.execute(&mut processor).unwrap();
             assert_eq!(processor.pc, processor.regs[i as usize]);
         }
 
         processor.regs[7] = 0x3000;
         let test_instr: IJump = IJump::Ret;
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x3000);
     }
 
@@ -469,15 +580,20 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([
                 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
             pc: 0x3000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         // JSR
         let test_instr = IJumpSubRoutine::Offset(InstrPCOffset11 { pc_offset: 0x0006 });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x3006);
         assert_eq!(processor.regs[7], 0x3000);
 
@@ -487,7 +603,7 @@ mod test {
 
         // JSRR
         let test_instr = IJumpSubRoutine::Reg(RegAddr::One);
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.pc, 0x000A);
         assert_eq!(processor.regs[7], 0x3000);
     }
@@ -501,10 +617,15 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([
                 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
             pc: 0x3000,
+            halted: false,
+            mpr_disabled: false,
         };
         let test_instr: ILoad = ILoad::Std(InstrPCOffset9 {
             target_reg: const { RegAddr::panic_from_u8(0) },
@@ -513,7 +634,7 @@ mod test {
 
         //LD
         processor.mem[0x3006] = 0xFF14;
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[0], 0xFF14);
 
         // LDI
@@ -523,7 +644,7 @@ mod test {
             target_reg: const { RegAddr::panic_from_u8(1) },
             pc_offset: 0x0002,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[1], 0xFF14);
 
         // LDR
@@ -534,7 +655,7 @@ mod test {
             base_reg: const { RegAddr::panic_from_u8(2) },
             offset: 0x0001,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[3], 0xFF14);
 
         // LEA
@@ -542,7 +663,7 @@ mod test {
             target_reg: const { RegAddr::panic_from_u8(4) },
             pc_offset: 0x000E,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.regs[4], 0x300F);
     }
 
@@ -555,10 +676,15 @@ mod test {
                 zero: false,
                 positive: false,
             },
+            priority: 0,
+            privileged: false,
+            supervisor_sp: SUPERVISOR_SP_INIT,
             regs: Box::new([
                 0xFF14, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
             ]),
             pc: 0x3000,
+            halted: false,
+            mpr_disabled: false,
         };
 
         // ST
@@ -566,7 +692,7 @@ mod test {
             target_reg: const { RegAddr::panic_from_u8(0) },
             pc_offset: 0x0004,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.mem[0x3005], 0xFF14);
 
         // STI
@@ -575,7 +701,7 @@ mod test {
             target_reg: const { RegAddr::panic_from_u8(0) },
             pc_offset: 0x0002,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.mem[0x300A], 0xFF14);
 
         // STR
@@ -585,7 +711,53 @@ mod test {
             base_reg: const { RegAddr::panic_from_u8(1) },
             offset: 0x0003,
         });
-        test_instr.execute(&mut processor);
+        test_instr.execute(&mut processor).unwrap();
         assert_eq!(processor.mem[0x3006], 0xFF14);
+    }
+
+    #[test]
+    fn priority_reg() {
+        let mut processor = CoreLC3::new();
+
+        processor.set_priority(3);
+        assert_eq!(processor.priority(), 3);
+        processor.set_priority(0);
+        assert_eq!(processor.priority(), 0);
+    }
+
+    #[test]
+    fn privilege_reg() {
+        let mut processor = CoreLC3::new();
+
+        processor.set_privileged(true);
+        assert!(processor.privileged());
+        processor.set_privileged(false);
+        assert!(!processor.privileged());
+    }
+
+    #[test]
+    fn processor_status_reg() {
+        let mut processor = CoreLC3::new();
+
+        processor.set_priority(0);
+        processor.set_privileged(true);
+        processor.clear_flags();
+
+        assert_eq!(processor.processor_status_reg(), 0);
+
+        processor.set_privileged(false);
+        assert_eq!(processor.processor_status_reg(), 0x8000);
+
+        processor.flag_negative();
+        assert_eq!(processor.processor_status_reg(), 0x8004);
+
+        processor.flag_zero();
+        assert_eq!(processor.processor_status_reg(), 0x8002);
+
+        processor.flag_positive();
+        assert_eq!(processor.processor_status_reg(), 0x8001);
+
+        processor.set_priority(5);
+        assert_eq!(processor.processor_status_reg(), 0x8501);
     }
 }

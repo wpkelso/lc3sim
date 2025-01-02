@@ -1,5 +1,3 @@
-use core::slice::SlicePattern;
-
 use crate::{
     assembler::{MaybeUnresolvedInstr, Op, PseudoOp, Token},
     defs::LC3Word,

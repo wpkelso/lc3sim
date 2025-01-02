@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<link href="http://www.cs.unca.edu/~brock/classes/style/handout.css"
+      rel="stylesheet" type="text/css" />
+<title>LC-3 Assembly Examples</title>
+</head>
+<body>
+<h1>LC-3 Assembly Examples</h1>
+<h2>Multiply by 10</h2>
+<pre class="code">
+;; Set R0 to 10*R1
+        .ORIG   x3000
+mul10   ADD     R0,R1,R1      ; R0 ==  2*R1
+        ADD     R0,R0,R0      ; R0 ==  4*R1
+        ADD     R0,R0,R1      ; R0 ==  5*R1
+        ADD     R0,R0,R0      ; R0 == 10*R1
+        HALT
+</pre>
+<h2>XOR registers R1 and R2</h2>
+<pre class="code">
+;; Set R3 to R1 ^ R2
+;;    i.e.      OR(    AND(NOT(R1),R2),     AND(R1,NOT(R2)))
+;;    i.e. NOT(AND(NOT(AND(NOT(R1),R2)),NOT(AND(R1,NOT(R2)))))
+        .ORIG   x3000
+xor     NOT     R1,R1
+        AND     R3,R1,R2
+        NOT     R1,R1
+        NOT     R2,R2
+        AND     R4,R1,R2
+        NOT     R2,R2
+        NOT     R3,R3
+        NOT     R4,R4
+        AND     R3,R3,R4
+        NOT     R3,R3
+        HALT
+</pre>
+<h2>Compute the "population" of R1</h2>
+<pre class="code">
+;; Set R0 to the number of bits "on" in R1
+        .ORIG   x3000
+pop     AND     R0,R0,#0
+        ADD     R1,R1,#0       ;; test the msb
+        BRzp    skipf
+        ADD     R0,R0,#1
+skipf   AND     R2,R2,#0
+        ADD     R2,R2,#15
+loop    ADD     R1,R1,R1       ;; now test the other 15
+        BRzp    skip
+        ADD     R0,R0,#1
+skip    ADD     R2,R2,#-1
+        BRp     loop
+        HALT
+        .END
+</pre>
+<h2>Compare a and b -- Try 1</h2>
+<pre class="code">
+;; Sets r to
+;; &lt;0, if a&lt;b
+;; =0, if a==b
+;; &gt;0, if a&gt;b
+
+;; Follows the conventions of C's qsort function
+;; and Java's comparable interface.
+        .ORIG   x3000
+        LD      R1,a
+        LD      R2,b
+        NOT     R2,R2
+        ADD     R2,R2,#1
+        ADD     R2,R1,R2      ;; R2 &lt;- a-b
+        ST      R2,r
+        HALT
+a       .FILL   #20000
+b       .FILL   #-20000
+        .BLKW   1
+        .END
+;; Unfortunately, this can fail if a-b overflows!
+</pre>
+<h2>Compare a and b -- Working</h2>
+<pre class="code">
+;; Really sets r to
+;; &lt;0, if a&lt;b
+;;  0, if a==b
+;; &gt;0, if a&gt;b
+
+
+;;  Returned value
+;;         |  a&lt;0  |  a&ge;=0 |
+;;  ------ +-------+-------+
+;;   b&lt;0   |  a-b  |   a   |
+;;  ------ +-------+-------+
+;;   b&gt;=0  |   a   |  a-b  |
+;;  ------ +-------+-------+
+
+       .ORIG    x3000
+cint    LD      R1,a
+        BRn     aNeg
+
+;; a&gt;=0, if here
+        LD      R2,b
+        BRn     retA
+        BR      cmp
+
+;; a&lt;0, if here
+aNeg    LD      R2,b
+        BRn     cmp
+;;      BR      retA
+
+;; a and b have different signs
+retA    ST      R1,r
+        BR     leave
+
+;; a and b have same sign
+cmp     NOT    R2,R2
+        ADD    R2,R2,#1
+        ADD    R2,R1,R2
+        ST     R2,r
+
+leave   HALT
+
+a      .FILL   #-20000
+b      .FILL   #20000
+r      .BLKW   1
+       .END
+</pre>
+<h2>Compare a and b -- Still working</h2>
+<pre class="code">
+;; Really sets r to
+;; &lt;0, if a&lt;b
+;;  0, if a==b
+;; &gt;0, if a&gt;b
+
+;;  Returned value
+;;         |  a&lt;0  |  a&gt;=0 |
+;;  ------ +-------+-------+
+;;   b&lt;0   |  a-b  |   a   |
+;;  ------ +-------+-------+
+;;   b&gt;=0  |   a   |  a-b  |
+;;  ------ +-------+-------+
+
+       .ORIG   x3000
+cint    LD     R3,b15
+        LD     R1,a
+        LD     R2,b
+        AND    R3,R3,R1              ;; R3 contains the sign bit of R1.
+        ADD    R3,R3,R2              ;; Negative only if R1 and R2
+        BRzp   cmp                   ;;    have different signs.
+
+;; a and b have different signs
+retA    ST     R1,r
+        BR     leave
+
+;; a and b have same sign
+cmp     NOT    R2,R2
+        ADD    R2,R2,#1
+        ADD    R2,R1,R2
+        ST     R2,r
+
+leave   HALT
+
+b15    .FILL   x8000    
+a      .FILL   #-20000
+b      .FILL   #20000
+r      .BLKW   1
+       .END
+</pre>
+<h2>Character count</h2>
+<pre class="code">
+;; Counts the number of times a character occurs in a string
+;; Character -- stored at x4000
+;; String    -- stored at x5000
+;; Result    -- stored at x6000
+        .ORIG    x3000
+nmChr   AND      R0,R0,#0
+        LD       R1,AFILE           ;; R1 has address of the string
+        LDI      R2,ALOOK4          ;; R2 has the value of the string
+        NOT      R2,R2
+        ADD      R2,R2,#1
+ALOOP   LDR      R3,R1,#0
+        BRz      STOPIT             ;; Leave loop on zero word
+        ADD      R3,R3,R2
+        BRnp     NOCOUNT
+        ADD      R0,R0,#1
+NOCOUNT ADD      R1,R1,#1
+        BR       ALOOP
+STOPIT  STI      R0,ACOUNT          ;; Count is stored
+        HALT
+ALOOK4  .FILL    x4000
+AFILE   .FILL    x5000
+ACOUNT  .FILL    x6000
+        .END
+</pre>
+<h2>AND a vector of words</h2>
+<pre class="code">
+;; AND's a vector of words
+        .ORIG    x3000
+andV    AND      R0,R0,#0
+        ADD      R0,R0,#-1           ;; Set R0 to all one's
+        LEA      R2,VECT             ;; Use LEA to get address of vector
+        LD       R1,SIZE
+        BRzp     STOPIT              ;; Return all one's if nothing to AND
+LOOP    LDR      R3,R2,#0
+        AND      R0,R0,R3
+        ADD      R2,R2,#1
+        ADD      R1,R1,#-1
+        BRp      ALOOP
+STOPIT  ST       R0,RESULT
+        HALT
+SIZE    .FILL    5
+VECT    .FILL    xBEEF
+        .FILL    x89AB
+        .FILL    xFFFF
+        .FILL    x89AB
+        .FILL    x2008
+RESULT  .BLKW    1       
+        .END
+</pre>
+<h2>Reverse a string</h2>
+<pre class="code">
+;; Reverse a string
+        .ORIG    x3000
+rev     LEA      R0,FILE      ;; R0 is beginning of string
+        ADD      R1,R0,#-1    
+LOOP1   LDR      R3,R1,#1     ;; Note -- LDR "looks" at the word past R1
+        BRz      DONE1
+        ADD      R1,R1,#1
+        BR       LOOP1
+
+DONE1   NOT      R2,R0
+        ADD      R2,R2,R1
+
+;; R0 == address of first character of string
+;; R1 == address of last character of string
+;; R2 == size of string - 2  (Think about it....)
+LOOP2   ADD      R2,R2,#0
+        BRn      DONE2
+        LDR      R3,R0,#0     ;; Swap
+        LDR      R4,R1,#0
+        STR      R4,R0,#0
+        STR      R3,R1,#0
+        ADD      R0,R0,#1     ;; move pointers
+        ADD      R1,R1,#-1
+        ADD      R2,R2,#-2    ;; decrease R2 by 2
+        BR       LOOP2
+
+DONE2   HALT
+
+FILE    .STRINGZ "This is so much fun!"
+        .END
+</pre>
+</body>
+</html>
