@@ -64,7 +64,9 @@ jobs:
     - uses: awalsh128/cache-apt-pkgs-action@v1
       with:
         packages: jq \
-          wget
+          wget |
+          default-jre
+
 
     - uses: dtolnay/rust-toolchain@nightly
       with:

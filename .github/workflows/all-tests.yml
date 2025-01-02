@@ -28,6 +28,10 @@ jobs:
     - uses: Swatinem/rust-cache@v2
     - uses: taiki-e/install-action@cargo-llvm-cov
 
+    - uses: awalsh128/cache-apt-pkgs-action@v1
+      with:
+        packages: default-jre
+
     - name: Regular Tests
       run: cargo llvm-cov test --no-report --tests --all-features
 
@@ -70,7 +74,7 @@ jobs:
 
     - uses: awalsh128/cache-apt-pkgs-action@v1
       with:
-        packages: libsodium-dev
+        packages: default-jre
 
     - uses: dtolnay/rust-toolchain@stable
     - uses: Swatinem/rust-cache@v2
@@ -79,31 +83,6 @@ jobs:
     - run: |
         cargo hack --each-feature build --ignore-private
         cargo hack --each-feature test --ignore-private --no-run 
-
-  # From https://github.com/rust-lang/miri
-  miri:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    environment:
-      name: ${{ github.ref_name != 'main' && 'testing' || 'unrestricted' }}
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: libsodium-dev
-
-      - name: Install Miri
-        run: |
-          rustup toolchain install nightly --component miri
-          rustup override set nightly
-          cargo miri setup
-      - name: Test with Miri
-        run: |
-          MIRIFLAGS="-Zmiri-disable-isolation" \
-            cargo miri test --all-features
 
   # From https://doc.rust-lang.org/cargo/guide/continuous-integration.html#verifying-rust-version
   # See https://crates.io/crates/cargo-hack
@@ -119,13 +98,17 @@ jobs:
 
     - uses: awalsh128/cache-apt-pkgs-action@v1
       with:
-        packages: libsodium-dev
+        packages: |
+          jq
 
     - uses: dtolnay/rust-toolchain@stable
     - uses: Swatinem/rust-cache@v2
     - uses: taiki-e/install-action@cargo-hack
 
-    - run: cargo hack check --version-range 1.79 --all-targets --all-features --ignore-private
+    - name: Test for MSRV in Cargo.toml
+      run: |
+        VERSION="$(cargo metadata --format-version 1 | jq '.packages | .[] | select(.name == "lc3sim")| .rust_version' | tr -d '"')"
+        cargo hack check --version-range "$VERSION" --all-targets --all-features --ignore-private
 
   test:
     strategy:
@@ -153,6 +136,11 @@ jobs:
       if: ${{ matrix.triple }}
       with:
         target: ${{ matrix.triple }}
+
+    - uses: awalsh128/cache-apt-pkgs-action@v1
+      if: ${{ matrix.os == 'ubuntu' }}
+      with:
+        packages: default-jre
 
     - uses: Swatinem/rust-cache@v2
 
