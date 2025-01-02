@@ -1,14 +1,14 @@
+use crate::defs::{LC3Word, Op, PseudoOp, RegAddr};
 use strum::EnumIs;
 use strum_macros::EnumDiscriminants;
-use crate::defs::{LC3Word, Op, PseudoOp, RegAddr};
 
-pub mod tokenizer;
 pub mod lexer;
+pub mod tokenizer;
 
 pub struct MaybeUnresolvedInstr {
     value: LC3Word,
     ///Label, Start offset, End offset
-    bindings: Option<(String, u8, u8)>,
+    bindings: Vec<(String, u8, u8)>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, EnumIs, EnumDiscriminants)]
