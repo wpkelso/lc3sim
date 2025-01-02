@@ -1,4 +1,3 @@
-use std::mem::discriminant;
 use crate::assembler::{MaybeUnresolvedInstr, Op, PseudoOp, Token};
 use anyhow::{Result, bail};
 
@@ -8,12 +7,7 @@ use anyhow::{Result, bail};
 /// First stage of the lexer operation, where any prefix labels are stripped out 
 #[inline]
 pub fn prefix_label_pass(token_chain: &[Token])  -> (Option<&str>, &[Token]) {
-    // we create a shell STRING variant to get it's discriminant, as this is more flexible than if
-    // we hardcode the discriminant value
-    let label_discriminant = discriminant(&Token::STRING("".to_string()));
-    let target_discriminant = discriminant(&token_chain[0]);
-
-    if target_discriminant.eq(&label_discriminant) {
+    if token_chain[0].is_string() {
         let label_str: &str = match &token_chain[0] { Token::STRING(label) => label.as_str(), _ => panic!("This shouldn't happen")};
         (Some(label_str), &token_chain[1..])
     } else {
