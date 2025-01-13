@@ -1,7 +1,7 @@
 use crate::{
     assembler::{MaybeUnresolvedInstr, Op, PseudoOp, Token},
     defs::LC3Word,
-    instruction::{ADD_OPCODE, AND_OPCODE},
+    instruction::{ADD_OPCODE, AND_OPCODE, ALL_JUMP_OPCODES, BRANCH_OPCODE, JSR_OPCODE, ALL_LOAD_OPCODES, ALL_STORE_OPCODES, TRAP_OPCODE},
 };
 use anyhow::{bail, Result};
 
@@ -95,7 +95,13 @@ pub fn construct_instruction_pass(token_chain: &[Token]) -> Result<Vec<MaybeUnre
                 ADD_OPCODE,
                 [check_reg::<9>, check_reg::<6>, check_reg_or_offset::<0, 5>].as_slice(),
             ),
-            Op::AND => (AND_OPCODE, [check_reg::<9>, check_reg::<6>].as_slice()),
+            Op::AND => (
+                AND_OPCODE, 
+                [check_reg::<9>, check_reg::<6>, check_reg_or_offset::<0, 5>].as_slice()),
+            Op::LD => (ALL_LOAD_OPCODES[0], [check_reg::<9>, check_offset::<0, 0>].as_slice()),
+            Op::LDI => (ALL_LOAD_OPCODES[1], [check_reg::<9>, check_offset::<0, 0>].as_slice()),
+            Op::LDR => (ALL_LOAD_OPCODES[2], [check_reg::<9>, check_reg::<6>, check_offset::<0, 6>].as_slice()),
+            Op::LEA => (ALL_LOAD_OPCODES[3], [check_reg::<9>, check_offset::<0, 0>].as_slice()),
             _ => todo!(),
         };
 
@@ -105,7 +111,7 @@ pub fn construct_instruction_pass(token_chain: &[Token]) -> Result<Vec<MaybeUnre
             bindings: Vec::new(),
         };
 
-        for (process, token) in sequence.into_iter().zip(&token_chain[1..]) {
+        for (process, token) in sequence.iter().zip(&token_chain[1..]) {
             process(token, &mut instr)?;
         }
     } else if operation.is_meta() {
