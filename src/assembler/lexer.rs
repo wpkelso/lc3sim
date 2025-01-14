@@ -1,7 +1,7 @@
 use crate::{
     assembler::{MaybeUnresolvedInstr, Op, PseudoOp, Token},
     defs::LC3Word,
-    instruction::{ADD_OPCODE, AND_OPCODE, ALL_JUMP_OPCODES, BRANCH_OPCODE, JSR_OPCODE, ALL_LOAD_OPCODES, ALL_STORE_OPCODES, TRAP_OPCODE},
+    instruction::{ADD_OPCODE, AND_OPCODE, ALL_JUMP_OPCODES, BRANCH_OPCODE, JSR_OPCODE, ALL_LOAD_OPCODES, ALL_STORE_OPCODES, TRAP_OPCODE, NOT_OPCODE},
 };
 use anyhow::{bail, Result};
 
@@ -98,10 +98,38 @@ pub fn construct_instruction_pass(token_chain: &[Token]) -> Result<Vec<MaybeUnre
             Op::AND => (
                 AND_OPCODE, 
                 [check_reg::<9>, check_reg::<6>, check_reg_or_offset::<0, 5>].as_slice()),
-            Op::LD => (ALL_LOAD_OPCODES[0], [check_reg::<9>, check_offset::<0, 0>].as_slice()),
-            Op::LDI => (ALL_LOAD_OPCODES[1], [check_reg::<9>, check_offset::<0, 0>].as_slice()),
-            Op::LDR => (ALL_LOAD_OPCODES[2], [check_reg::<9>, check_reg::<6>, check_offset::<0, 6>].as_slice()),
-            Op::LEA => (ALL_LOAD_OPCODES[3], [check_reg::<9>, check_offset::<0, 0>].as_slice()),
+            Op::LD => (
+                ALL_LOAD_OPCODES[0], 
+                [check_reg::<9>, check_offset::<0, 0>].as_slice()
+            ),
+            Op::LDI => (
+                ALL_LOAD_OPCODES[1], 
+                [check_reg::<9>, check_offset::<0, 0>].as_slice()
+            ),
+            Op::LDR => (
+                ALL_LOAD_OPCODES[2], 
+                [check_reg::<9>, check_reg::<6>, check_offset::<0, 6>].as_slice()
+            ),
+            Op::LEA => (
+                ALL_LOAD_OPCODES[3], 
+                [check_reg::<9>, check_offset::<0, 0>].as_slice()
+            ),
+            Op::ST => (
+                ALL_STORE_OPCODES[0], 
+                [check_reg::<9>, check_offset::<0, 0>].as_slice()
+            ),
+            Op::STI => (
+                ALL_STORE_OPCODES[1], 
+                [check_reg::<9>, check_offset::<0, 0>].as_slice()
+            ),
+            Op::STR => (
+                ALL_STORE_OPCODES[2], 
+                [check_reg::<9>, check_reg::<6>, check_offset::<0, 6>].as_slice()
+            ),
+            Op::NOT => (
+                NOT_OPCODE,
+                [check_reg::<9>, check_reg::<6>].as_slice()
+            ),
             _ => todo!(),
         };
 
