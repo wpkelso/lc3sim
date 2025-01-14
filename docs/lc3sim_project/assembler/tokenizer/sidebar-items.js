@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Token"],"fn":["tokenize"]};
+window.SIDEBAR_ITEMS = {"fn":["tokenize"]};

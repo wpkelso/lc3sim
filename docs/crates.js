@@ -1,2 +1,2 @@
-window.ALL_CRATES = ["aho_corasick","anyhow","lc3sim","lc3sim_project","memchr","once_cell","proc_macro2","quote","regex","regex_automata","regex_syntax","syn","testcli","thiserror","thiserror_impl","unicode_ident"];
-//{"start":21,"fragment_lengths":[14,9,9,17,9,12,14,8,8,17,15,6,10,12,17,16]}
+window.ALL_CRATES = ["aho_corasick","anyhow","heck","lc3sim","lc3sim_project","memchr","once_cell","proc_macro2","quote","regex","regex_automata","regex_syntax","rustversion","strum","strum_macros","syn","testcli","thiserror","thiserror_impl","unicode_ident"];
+//{"start":21,"fragment_lengths":[14,9,7,9,17,9,12,14,8,8,17,15,14,8,15,6,10,12,17,16]}

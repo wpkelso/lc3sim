@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["resolve_instr","translate_line"],"mod":["tokenizer"],"struct":["MaybeUnresolvedInstr"]};
+window.SIDEBAR_ITEMS = {"enum":["Token","TokenDiscriminants"],"fn":["resolve_instr","translate_line"],"mod":["lexer","tokenizer"],"struct":["MaybeUnresolvedInstr"]};
