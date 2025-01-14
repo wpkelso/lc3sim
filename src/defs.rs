@@ -1,3 +1,4 @@
+use strum_macros::EnumDiscriminants;
 use thiserror::Error;
 
 pub type LC3Word = u16;
@@ -114,19 +115,19 @@ impl From<RegAddr> for u8 {
     }
 }
 
-impl From<RegAddr> for usize {
-    fn from(value: RegAddr) -> Self {
-        u8::from(value) as usize
-    }
-}
-
 impl From<RegAddr> for u16 {
     fn from(value: RegAddr) -> Self {
         u8::from(value) as u16
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+impl From<RegAddr> for usize {
+    fn from(value: RegAddr) -> Self {
+        u8::from(value) as usize
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, EnumDiscriminants)]
 pub enum Op {
     ADD,
     AND,
@@ -154,7 +155,7 @@ pub enum Op {
     ILLEGAL,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, EnumDiscriminants)]
 pub enum PseudoOp {
     ORIG,
     FILL,
