@@ -5,6 +5,7 @@ use strum_macros::EnumDiscriminants;
 pub mod lexer;
 pub mod tokenizer;
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct MaybeUnresolvedInstr {
     value: LC3Word,
     ///Label, Start offset, End offset
