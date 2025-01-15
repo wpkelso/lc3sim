@@ -28,6 +28,9 @@ pub enum Token {
 
 pub fn translate_line(line: &str) -> Result<Vec<MaybeUnresolvedInstr>> {
     let (instruction, comment) = line.split_once(';').unwrap();
+    // The UNCA examples don't use spaces between instruction args, so we should always just add a
+    // space after a comma to make sure we're able to parse properly
+    let instruction = instruction.replace(',', ", ");
     let splits = instruction.split_ascii_whitespace();
     let mut token_chain: Vec<Token> = Vec::new();
 
@@ -53,6 +56,15 @@ mod test {
     #[test]
     fn translate_instr() {
         let instruction: &str = "AND R0, R1, R0;";
+        let machine_code = translate_line(instruction).unwrap();
+
+        assert_eq!(machine_code.len(), 1);
+        assert_eq!(machine_code.first().unwrap().value, 0b0101000001000000);
+    }
+
+    #[test]
+    fn translate_instr_no_space() {
+        let instruction: &str = "AND R0,R1,R0;";
         let machine_code = translate_line(instruction).unwrap();
 
         assert_eq!(machine_code.len(), 1);
