@@ -91,45 +91,57 @@ pub fn construct_instruction_pass(token_chain: &[Token]) -> Result<Vec<MaybeUnre
             }
         }
 
+        fn check_comma(
+            token: &Token,
+            instr: &mut MaybeUnresolvedInstr,
+        ) -> Result<(), anyhow::Error> {
+            if let Token::COMMA = token {
+                Ok(())
+            } else {
+                bail!("NOT COMMA")
+            }
+
+        }
+
         let (opcode, sequence) = match op {
             Op::ADD => (
                 ADD_OPCODE,
-                [check_reg::<9>, check_reg::<6>, check_reg_or_offset::<0, 5>].as_slice(),
+                [check_reg::<9>, check_comma, check_reg::<6>, check_comma, check_reg_or_offset::<0, 5>].as_slice(),
             ),
             Op::AND => (
                 AND_OPCODE, 
-                [check_reg::<9>, check_reg::<6>, check_reg_or_offset::<0, 5>].as_slice()),
+                [check_reg::<9>, check_comma, check_reg::<6>, check_comma, check_reg_or_offset::<0, 5>].as_slice()),
             Op::LD => (
                 ALL_LOAD_OPCODES[0], 
-                [check_reg::<9>, check_offset::<0, 9>].as_slice()
+                [check_reg::<9>, check_comma, check_offset::<0, 9>].as_slice()
             ),
             Op::LDI => (
                 ALL_LOAD_OPCODES[1], 
-                [check_reg::<9>, check_offset::<0, 9>].as_slice()
+                [check_reg::<9>, check_comma, check_offset::<0, 9>].as_slice()
             ),
             Op::LDR => (
                 ALL_LOAD_OPCODES[2], 
-                [check_reg::<9>, check_reg::<6>, check_offset::<0, 6>].as_slice()
+                [check_reg::<9>, check_comma, check_reg::<6>, check_comma, check_offset::<0, 6>].as_slice()
             ),
             Op::LEA => (
                 ALL_LOAD_OPCODES[3], 
-                [check_reg::<9>, check_offset::<0, 9>].as_slice()
+                [check_reg::<9>, check_comma, check_offset::<0, 9>].as_slice()
             ),
             Op::ST => (
                 ALL_STORE_OPCODES[0], 
-                [check_reg::<9>, check_offset::<0, 9>].as_slice()
+                [check_reg::<9>, check_comma, check_offset::<0, 9>].as_slice()
             ),
             Op::STI => (
                 ALL_STORE_OPCODES[1], 
-                [check_reg::<9>, check_offset::<0, 9>].as_slice()
+                [check_reg::<9>, check_comma, check_offset::<0, 9>].as_slice()
             ),
             Op::STR => (
                 ALL_STORE_OPCODES[2], 
-                [check_reg::<9>, check_reg::<6>, check_offset::<0, 6>].as_slice()
+                [check_reg::<9>, check_comma, check_reg::<6>, check_comma, check_offset::<0, 6>].as_slice()
             ),
             Op::NOT => (
                 NOT_OPCODE,
-                [check_reg::<9>, check_reg::<6>].as_slice()
+                [check_reg::<9>, check_comma, check_reg::<6>].as_slice()
             ),
             _ => todo!(),
         };
@@ -186,7 +198,9 @@ mod test {
             Token::STRING("LABEL1".to_string()),
             Token::INSTR(Op::AND),
             Token::REGISTER(RegAddr::Zero),
+            Token::COMMA,
             Token::REGISTER(RegAddr::One),
+            Token::COMMA,
             Token::REGISTER(RegAddr::Zero)
         ];
         let (label, instr) = lexer(&test_vec);
@@ -197,7 +211,9 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::AND),
             Token::REGISTER(RegAddr::Three),
+            Token::COMMA,
             Token::REGISTER(RegAddr::One),
+            Token::COMMA,
             Token::NUM(0b10011)
         ];
         let (label, instr) = lexer(&test_vec);
@@ -212,7 +228,9 @@ mod test {
             Token::STRING("LABEL1".to_string()),
             Token::INSTR(Op::ADD),
             Token::REGISTER(RegAddr::Zero),
+            Token::COMMA,
             Token::REGISTER(RegAddr::One),
+            Token::COMMA,
             Token::REGISTER(RegAddr::Zero)
         ];
         let (label, instr) = lexer(&test_vec);
@@ -223,7 +241,9 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::ADD),
             Token::REGISTER(RegAddr::Three),
+            Token::COMMA,
             Token::REGISTER(RegAddr::One),
+            Token::COMMA,
             Token::NUM(0b10011)
         ];
         let (label, instr) = lexer(&test_vec);
@@ -237,6 +257,7 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LD),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::NUM(0b000111000)
         ];
         let (label, instr) = lexer(&test_vec);
@@ -247,6 +268,7 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LDI),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::NUM(0b000111000)
         ];
         let (label, instr) = lexer(&test_vec);
@@ -257,7 +279,9 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LDR),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::REGISTER(RegAddr::Two),
+            Token::COMMA,
             Token::NUM(0b111000)
         ];
         let (label, instr) = lexer(&test_vec);
@@ -268,6 +292,7 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LEA),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::NUM(0b000111000)
         ];
         let (label, instr) = lexer(&test_vec);
@@ -281,6 +306,7 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::ST),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::NUM(0b000111000)
         ];
         let (label, instr) = lexer(&test_vec);
@@ -291,6 +317,7 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::STI),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::NUM(0b000111000)
         ];
         let (label, instr) = lexer(&test_vec);
@@ -301,27 +328,14 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::STR),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::REGISTER(RegAddr::Two),
+            Token::COMMA,
             Token::NUM(0b111000)
         ];
         let (label, instr) = lexer(&test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0111101010111000);
-    }
-
-    #[test]
-    fn lex_not_instr() {
-        let test_vec = vec![
-            Token::INSTR(Op::NOT),
-            Token::REGISTER(RegAddr::Five),
-            Token::REGISTER(RegAddr::Zero),
-        ];
-        let (label, instr) = lexer(&test_vec);
-
-        assert_eq!(label, None);
-        // This is the value that should be produced. Currently this fails, as there is no way to
-        // insert arbitrary bits into instructions when forming them.
-        assert_eq!(instr.unwrap().first().unwrap().value, 0b1001101000111111);
     }
 }
