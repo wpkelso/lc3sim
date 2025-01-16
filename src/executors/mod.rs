@@ -8,8 +8,10 @@ use crate::{
     util::format_word_bits,
 };
 
-pub mod consolidated;
 pub mod core;
+
+#[cfg(feature = "consolidated")]
+pub mod consolidated;
 
 /// LC3 Memory Address.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

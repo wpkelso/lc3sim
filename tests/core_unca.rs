@@ -6,9 +6,11 @@ mod exec {
     use super::*;
 
     use common::penn_sim::{load_os, MemDump};
+    #[cfg(feature = "consolidated")]
+    use lc3sim_project::executors::consolidated::ConsolidatedLC3;
     use lc3sim_project::{
         defs::{LC3MemAddr, USER_SPACE},
-        executors::{consolidated::ConsolidatedLC3, core::CoreLC3, populate_from_bin, LC3},
+        executors::{core::CoreLC3, populate_from_bin, LC3},
         harnesses::{simple::FailIO, sync::lim_step_continue},
     };
 
@@ -50,6 +52,7 @@ mod exec {
         ( $name:ident, $path:literal ) => {
             paste! {
                 cmp_test!( [<$name _core>], $path, CoreLC3::new() );
+                #[cfg(feature = "consolidated")]
                 cmp_test!( [<$name _consolidated>], $path, ConsolidatedLC3::boxed() );
             }
         };
