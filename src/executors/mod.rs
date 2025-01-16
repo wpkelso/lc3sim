@@ -8,6 +8,7 @@ use crate::{
     util::format_word_bits,
 };
 
+pub mod consolidated;
 pub mod core;
 
 /// LC3 Memory Address.
@@ -197,6 +198,172 @@ pub fn populate_from_bin<P: LC3, R: Read>(processor: &mut P, bin: R) {
 
     if let Some(start) = next_pair() {
         processor.populate(start, std::iter::from_fn(next_pair));
+    }
+}
+
+impl<T: LC3> LC3 for &mut T {
+    fn pc(&self) -> LC3MemAddr {
+        T::pc(self)
+    }
+    fn set_pc(&mut self, pc: LC3MemAddr) {
+        T::set_pc(self, pc);
+    }
+    fn reg(&self, addr: RegAddr) -> LC3Word {
+        T::reg(self, addr)
+    }
+    fn set_reg(&mut self, addr: RegAddr, value: LC3Word) {
+        T::set_reg(self, addr, value);
+    }
+    fn mem(&self, addr: LC3MemAddr) -> LC3Word {
+        T::mem(self, addr)
+    }
+    fn set_mem(&mut self, addr: LC3MemAddr, value: LC3Word) {
+        T::set_mem(self, addr, value);
+    }
+    fn priority(&self) -> u8 {
+        T::priority(self)
+    }
+    fn set_priority(&mut self, priority: u8) {
+        T::set_priority(self, priority);
+    }
+    fn privileged(&self) -> bool {
+        T::privileged(self)
+    }
+    fn set_privileged(&mut self, priviledged: bool) {
+        T::set_privileged(self, priviledged);
+    }
+    fn positive_cond(&self) -> bool {
+        T::positive_cond(self)
+    }
+    fn zero_cond(&self) -> bool {
+        T::zero_cond(self)
+    }
+    fn negative_cond(&self) -> bool {
+        T::negative_cond(self)
+    }
+    fn flag_positive(&mut self) {
+        T::flag_positive(self);
+    }
+    fn flag_zero(&mut self) {
+        T::flag_zero(self);
+    }
+    fn flag_negative(&mut self) {
+        T::flag_negative(self);
+    }
+    fn clear_flags(&mut self) {
+        T::clear_flags(self);
+    }
+    type FullIter<'a>
+        = T::FullIter<'a>
+    where
+        Self: 'a;
+    fn iter(&self) -> Self::FullIter<'_> {
+        T::iter(self)
+    }
+    type SparseIter<'a>
+        = T::SparseIter<'a>
+    where
+        Self: 'a;
+    fn sparse_iter(&self) -> Self::SparseIter<'_> {
+        T::sparse_iter(self)
+    }
+    fn halt(&mut self) {
+        T::halt(self);
+    }
+    fn unhalt(&mut self) {
+        T::unhalt(self);
+    }
+    fn is_halted(&self) -> bool {
+        T::is_halted(self)
+    }
+    fn step(&mut self) -> Result<(), StepFailure> {
+        T::step(self)
+    }
+    fn populate<I: IntoIterator<Item = LC3Word>>(&mut self, start: LC3MemAddr, words: I) {
+        T::populate(self, start, words);
+    }
+}
+
+impl<T: LC3> LC3 for Box<T> {
+    fn pc(&self) -> LC3MemAddr {
+        T::pc(self)
+    }
+    fn set_pc(&mut self, pc: LC3MemAddr) {
+        T::set_pc(self, pc);
+    }
+    fn reg(&self, addr: RegAddr) -> LC3Word {
+        T::reg(self, addr)
+    }
+    fn set_reg(&mut self, addr: RegAddr, value: LC3Word) {
+        T::set_reg(self, addr, value);
+    }
+    fn mem(&self, addr: LC3MemAddr) -> LC3Word {
+        T::mem(self, addr)
+    }
+    fn set_mem(&mut self, addr: LC3MemAddr, value: LC3Word) {
+        T::set_mem(self, addr, value);
+    }
+    fn priority(&self) -> u8 {
+        T::priority(self)
+    }
+    fn set_priority(&mut self, priority: u8) {
+        T::set_priority(self, priority);
+    }
+    fn privileged(&self) -> bool {
+        T::privileged(self)
+    }
+    fn set_privileged(&mut self, priviledged: bool) {
+        T::set_privileged(self, priviledged);
+    }
+    fn positive_cond(&self) -> bool {
+        T::positive_cond(self)
+    }
+    fn zero_cond(&self) -> bool {
+        T::zero_cond(self)
+    }
+    fn negative_cond(&self) -> bool {
+        T::negative_cond(self)
+    }
+    fn flag_positive(&mut self) {
+        T::flag_positive(self);
+    }
+    fn flag_zero(&mut self) {
+        T::flag_zero(self);
+    }
+    fn flag_negative(&mut self) {
+        T::flag_negative(self);
+    }
+    fn clear_flags(&mut self) {
+        T::clear_flags(self);
+    }
+    type FullIter<'a>
+        = T::FullIter<'a>
+    where
+        Self: 'a;
+    fn iter(&self) -> Self::FullIter<'_> {
+        T::iter(self)
+    }
+    type SparseIter<'a>
+        = T::SparseIter<'a>
+    where
+        Self: 'a;
+    fn sparse_iter(&self) -> Self::SparseIter<'_> {
+        T::sparse_iter(self)
+    }
+    fn halt(&mut self) {
+        T::halt(self);
+    }
+    fn unhalt(&mut self) {
+        T::unhalt(self);
+    }
+    fn is_halted(&self) -> bool {
+        T::is_halted(self)
+    }
+    fn step(&mut self) -> Result<(), StepFailure> {
+        T::step(self)
+    }
+    fn populate<I: IntoIterator<Item = LC3Word>>(&mut self, start: LC3MemAddr, words: I) {
+        T::populate(self, start, words);
     }
 }
 

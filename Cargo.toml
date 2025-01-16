@@ -26,6 +26,10 @@ strum = { version = "0.26.3", features = ["derive"] }
 strum_macros = "0.26.4"
 # To reduce error boilerplate
 thiserror = "2"
+# For better error tracking
+bare_err_tree = "0.7"
+# Creating large struct parts directly on the heap
+pinned-init = { version = "0.0.9", default-features = false, features = ["std"] }
 
 [dev-dependencies]
 # To reduce getter boilerplate
@@ -34,5 +38,6 @@ derive-getters = "0.5"
 once_map = "0.4"
 # Reducing test writing boilerplate via macro
 paste = "1"
+stable_deref_trait = "1"
 # Random tempfile names
 uuid = { version = "1", features = ["v4"] }
