@@ -60,7 +60,7 @@ pub trait Instruction: Into<LC3Word> {
 ///
 /// If this does not parse and execute, there is no valid LC-3 instruction
 /// that could parse and execute the given word.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum InstructionEnum {
     IAdd(IAdd),
     IAnd(IAnd),
