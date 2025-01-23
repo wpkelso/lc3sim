@@ -18,6 +18,10 @@ path = "src/cli.rs"
 name = "testcli"
 path = "src/testcli.rs"
 
+[[bench]]
+name = "executor_compare"
+harness = false
+
 [features]
 default = []
 consolidated = ["dep:pinned-init"]
@@ -36,6 +40,7 @@ bare_err_tree = "0.7"
 pinned-init = { version = "0.0.9", optional = true, default-features = false, features = ["std"] }
 
 [dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
 # To reduce getter boilerplate
 derive-getters = "0.5"
 # More efficient map initialization
