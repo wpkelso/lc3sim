@@ -32,14 +32,18 @@ impl CachedResolve {
         Self::Raw(word)
     }
 
+    #[inline]
+    #[cold]
+    pub fn raw_instr(&mut self, word: LC3Word) -> Option<InstructionEnum> {
+        let instr = InstructionEnum::parse(word)?;
+        *self = Self::Resolved(instr);
+        Some(instr)
+    }
+
     pub fn instr(&mut self) -> Option<InstructionEnum> {
-        match self {
-            Self::Raw(word) => {
-                let instr = InstructionEnum::parse(*word)?;
-                *self = Self::Resolved(instr);
-                Some(instr)
-            }
-            Self::Resolved(instr) => Some(*instr),
+        match *self {
+            Self::Raw(word) => self.raw_instr(word),
+            Self::Resolved(instr) => Some(instr),
         }
     }
 
