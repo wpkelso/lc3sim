@@ -13,6 +13,9 @@ pub mod core;
 #[cfg(feature = "consolidated")]
 pub mod consolidated;
 
+#[cfg(feature = "cached_resolve")]
+pub mod cached_resolve;
+
 /// LC3 Memory Address.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LC3MemLoc {

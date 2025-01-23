@@ -25,6 +25,7 @@ harness = false
 [features]
 default = []
 consolidated = ["dep:pinned-init"]
+cached_resolve = ["dep:pinned-init"]
 
 [dependencies]
 anyhow = "1.0.95"

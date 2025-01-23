@@ -6,6 +6,8 @@ mod exec {
     use super::*;
 
     use common::penn_sim::{load_os, MemDump};
+    #[cfg(feature = "cached_resolve")]
+    use lc3sim_project::executors::cached_resolve::CachedResolveLC3;
     #[cfg(feature = "consolidated")]
     use lc3sim_project::executors::consolidated::ConsolidatedLC3;
     use lc3sim_project::{
@@ -54,6 +56,8 @@ mod exec {
                 cmp_test!( [<$name _core>], $path, CoreLC3::new() );
                 #[cfg(feature = "consolidated")]
                 cmp_test!( [<$name _consolidated>], $path, ConsolidatedLC3::boxed() );
+                #[cfg(feature = "cached_resolve")]
+                cmp_test!( [<$name _cached_resolve>], $path, CachedResolveLC3::boxed() );
             }
         };
     }

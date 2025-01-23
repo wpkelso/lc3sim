@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use lc3sim_project::{
     executors::{core::CoreLC3, populate_from_bin, LC3},
@@ -32,6 +34,11 @@ pub fn create_new(c: &mut Criterion) {
         lc3sim_project::executors::consolidated::ConsolidatedLC3::boxed,
         "consolidated"
     );
+    #[cfg(feature = "cached_resolve")]
+    bench_new!(
+        lc3sim_project::executors::cached_resolve::CachedResolveLC3::boxed,
+        "cached_resolve"
+    );
 }
 
 pub fn load_os(c: &mut Criterion) {
@@ -56,10 +63,16 @@ pub fn load_os(c: &mut Criterion) {
         lc3sim_project::executors::consolidated::ConsolidatedLC3::boxed,
         "consolidated"
     );
+    #[cfg(feature = "cached_resolve")]
+    bench_load!(
+        lc3sim_project::executors::cached_resolve::CachedResolveLC3::boxed,
+        "cached_resolve"
+    );
 }
 
 pub fn tiny_loop(c: &mut Criterion) {
     let mut c = c.benchmark_group("tiny_loop");
+    let c = c.measurement_time(Duration::from_secs(20));
 
     fn exec_loop<E: LC3>(mut lc3: E) {
         step_continue(&mut FailIO, &mut lc3).unwrap();
@@ -83,6 +96,11 @@ pub fn tiny_loop(c: &mut Criterion) {
     bench_loop!(
         lc3sim_project::executors::consolidated::ConsolidatedLC3::boxed(),
         "consolidated"
+    );
+    #[cfg(feature = "cached_resolve")]
+    bench_loop!(
+        lc3sim_project::executors::cached_resolve::CachedResolveLC3::boxed(),
+        "cached_resolve"
     );
 }
 
