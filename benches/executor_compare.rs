@@ -39,6 +39,11 @@ pub fn create_new(c: &mut Criterion) {
         lc3sim_project::executors::cached_resolve::CachedResolveLC3::boxed,
         "cached_resolve"
     );
+    #[cfg(feature = "instruction_mem")]
+    bench_new!(
+        lc3sim_project::executors::instruction_mem::InstMemLC3::boxed,
+        "instruction_mem"
+    );
 }
 
 pub fn load_os(c: &mut Criterion) {
@@ -67,6 +72,11 @@ pub fn load_os(c: &mut Criterion) {
     bench_load!(
         lc3sim_project::executors::cached_resolve::CachedResolveLC3::boxed,
         "cached_resolve"
+    );
+    #[cfg(feature = "instruction_mem")]
+    bench_load!(
+        lc3sim_project::executors::instruction_mem::InstMemLC3::boxed,
+        "instruction_mem"
     );
 }
 
@@ -101,6 +111,11 @@ pub fn tiny_loop(c: &mut Criterion) {
     bench_loop!(
         lc3sim_project::executors::cached_resolve::CachedResolveLC3::boxed(),
         "cached_resolve"
+    );
+    #[cfg(feature = "instruction_mem")]
+    bench_loop!(
+        lc3sim_project::executors::instruction_mem::InstMemLC3::boxed(),
+        "instruction_mem"
     );
 }
 

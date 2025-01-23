@@ -10,6 +10,8 @@ mod exec {
     use lc3sim_project::executors::cached_resolve::CachedResolveLC3;
     #[cfg(feature = "consolidated")]
     use lc3sim_project::executors::consolidated::ConsolidatedLC3;
+    #[cfg(feature = "instruction_mem")]
+    use lc3sim_project::executors::instruction_mem::InstMemLC3;
     use lc3sim_project::{
         defs::{LC3MemAddr, USER_SPACE},
         executors::{core::CoreLC3, populate_from_bin, LC3},
@@ -58,6 +60,8 @@ mod exec {
                 cmp_test!( [<$name _consolidated>], $path, ConsolidatedLC3::boxed() );
                 #[cfg(feature = "cached_resolve")]
                 cmp_test!( [<$name _cached_resolve>], $path, CachedResolveLC3::boxed() );
+                #[cfg(feature = "instruction_mem")]
+                cmp_test!( [<$name _instruction_mem>], $path, InstMemLC3::boxed() );
             }
         };
     }

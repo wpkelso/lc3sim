@@ -26,6 +26,7 @@ harness = false
 default = []
 consolidated = ["dep:pinned-init"]
 cached_resolve = ["dep:pinned-init"]
+instruction_mem = ["dep:pinned-init"]
 
 [dependencies]
 anyhow = "1.0.95"
