@@ -7,7 +7,7 @@ use crate::{
     util::{apply_offset, shift_to_signed, shift_to_unsigned},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum IJumpSubRoutine {
     Offset(InstrPCOffset11), //JSR
     Reg(RegAddr),            //JSRR treated as an offset6 with an offset of 0

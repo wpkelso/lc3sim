@@ -8,7 +8,7 @@ use crate::{
     util::{apply_offset, shift_to_signed, shift_to_unsigned},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum IStore {
     Std(InstrPCOffset9),      //ST
     Indirect(InstrPCOffset9), //STI
