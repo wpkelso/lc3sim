@@ -6,7 +6,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct INot(pub InstrRegOnly);
 pub const NOT_OPCODE: u8 = 0b1001;
 

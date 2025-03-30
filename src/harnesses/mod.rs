@@ -5,10 +5,11 @@ use thiserror::Error;
 use crate::executors::StepFailure;
 
 pub mod r#async;
+pub mod general;
 pub mod simple;
 pub mod sync;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Error)]
+#[derive(Debug, Error)]
 pub enum ExecutionFailure {
     #[error(transparent)]
     LC3(#[from] StepFailure),
@@ -18,4 +19,18 @@ pub enum ExecutionFailure {
     NoConsole,
     #[error("No display is connected, cannot write for visual output")]
     NoDisplay,
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+}
+
+impl PartialEq for ExecutionFailure {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::LC3(x), Self::LC3(y)) => x == y,
+            (Self::NoKeyboard, Self::NoKeyboard)
+            | (Self::NoConsole, Self::NoConsole)
+            | (Self::NoDisplay, Self::NoDisplay) => true,
+            _ => false,
+        }
+    }
 }

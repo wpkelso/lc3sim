@@ -4,7 +4,7 @@ use crate::{
     instruction::{get_bits, get_opcode, Instruction, InstructionErr},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Trap {
     Getc,  // 0x20
     Out,   // 0x21

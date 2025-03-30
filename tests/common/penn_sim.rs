@@ -4,6 +4,7 @@ use std::{
     fs::{self, create_dir_all, read_to_string, File},
     hash::Hash,
     io::{BufRead, BufReader, Read, Write},
+    ops::Deref,
     path::{Path, PathBuf},
     process::Command,
     sync::LazyLock,
@@ -15,7 +16,24 @@ use lc3sim_project::{
     executors::{populate_from_bin, LC3},
 };
 use once_map::OnceMap;
+use stable_deref_trait::StableDeref;
 use uuid::Uuid;
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct MemDump {
+    pub output_lines: String,
+    pub memory: [LC3Word; DEV_REG_ADDR as usize],
+}
+
+impl Deref for MemDump {
+    type Target = Self;
+    fn deref(&self) -> &Self::Target {
+        self
+    }
+}
+
+// Consists of two [`StableDeref`] types.
+unsafe impl StableDeref for MemDump {}
 
 /// Set of input and result from PennSim.
 ///
@@ -125,10 +143,7 @@ impl CompileSet {
     }
 
     /// Get output lines and final memory after a pennsim run.
-    pub fn post_process_mem_dump<S: AsRef<str>>(
-        &self,
-        input: S,
-    ) -> (String, [LC3Word; DEV_REG_ADDR as usize]) {
+    pub fn post_process_mem_dump<S: AsRef<str>>(&self, input: S) -> MemDump {
         // Create the temporary directory
         let temp_dir = temp_dir().join(Uuid::new_v4().to_string());
         create_dir_all(&temp_dir).unwrap();
@@ -201,7 +216,10 @@ impl CompileSet {
         // Clean up the temporary directory
         fs::remove_dir_all(&temp_dir).unwrap();
 
-        (cmd_output, out)
+        MemDump {
+            output_lines: cmd_output,
+            memory: out,
+        }
     }
 }
 
@@ -219,10 +237,39 @@ pub fn get_compiled<P: AsRef<Path>>(path: P, data: &'static str) -> &'static Com
     })
 }
 
+/// Deliberately leaks values for a static lifetime
+static OUTPUT: LazyLock<OnceMap<(PathBuf, String), MemDump>> = LazyLock::new(OnceMap::new);
+
+/// Get this file after processing through PennSim.
+///
+/// Only compiles a given file through PennSim once, and never drops it.
+///
+/// See [`static_output`] to only provide a filename.
+pub fn get_output<P: AsRef<Path>, S: AsRef<str>>(
+    path: P,
+    data: &'static str,
+    input: S,
+) -> &'static MemDump {
+    OUTPUT.insert(
+        (path.as_ref().to_path_buf(), input.as_ref().to_string()),
+        |_| {
+            let compiled = get_compiled(path, data);
+            compiled.post_process_mem_dump(input)
+        },
+    )
+}
+
 #[macro_export]
 macro_rules! static_compiled {
     ( $x: expr ) => {
         $crate::common::penn_sim::get_compiled($x, include_str!($x))
+    };
+}
+
+#[macro_export]
+macro_rules! static_output {
+    ( $x: expr, $input: expr ) => {
+        $crate::common::penn_sim::get_output($x, include_str!($x), $input)
     };
 }
 

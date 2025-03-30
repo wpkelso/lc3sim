@@ -206,7 +206,7 @@ impl LC3 for CoreLC3 {
 
 /// Sparse iterator for [`CoreLC3`].
 ///
-/// Skips all nonzero elements.
+/// Skips all zero elements.
 pub struct CoreLC3SparseIter<'a> {
     iter: std::iter::Enumerate<<CoreLC3 as LC3>::FullIter<'a>>,
 }
