@@ -3,8 +3,13 @@ use std::io::Read;
 use thiserror::Error;
 
 use crate::{
-    defs::{LC3MemAddr, LC3Word, RegAddr, STACK_REG},
-    instruction::{Instruction, InstructionEnum, InstructionErr, InsufficientPerms},
+    defs::{
+        HalfLC3Word, LC3MemAddr, LC3Word, RegAddr, DISPLAY_DATA_REGISTER, DISPLAY_STATUS_REGISTER,
+        KEYBOARD_DATA_REGISTER, KEYBOARD_INTERRUPT, KEYBOARD_STATUS_REGISTER, STACK_REG,
+    },
+    instruction::{
+        IJumpSubRoutine, Instruction, InstructionEnum, InstructionErr, InsufficientPerms,
+    },
     util::format_word_bits,
 };
 
@@ -190,6 +195,39 @@ pub trait LC3 {
 
     /// Fill the lines from `start` with `words`.
     fn populate<I: IntoIterator<Item = LC3Word>>(&mut self, start: LC3MemAddr, words: I);
+
+    /// Push a character into the keyboard
+    fn push_keyboard(&mut self, value: LC3Word) {
+        // Insert the memory
+        self.set_mem(KEYBOARD_DATA_REGISTER, value);
+
+        // Update the status register
+        let kbsr = self.mem(KEYBOARD_STATUS_REGISTER);
+        let kbsr_set = kbsr | (1 << 15);
+        self.set_mem(KEYBOARD_STATUS_REGISTER, kbsr_set);
+
+        // Trigger the keyboard interrupt
+        self.interrupt(0x80, Some(4));
+    }
+
+    fn keyboard_received(&self) -> bool {
+        let masked = self.mem(KEYBOARD_STATUS_REGISTER) & (1 << 15);
+        masked != 0
+    }
+
+    fn pop_crt(&mut self) -> Option<HalfLC3Word> {
+        let dsp = self.mem(DISPLAY_STATUS_REGISTER);
+        let dsp_masked = dsp & (1 << 15);
+
+        if dsp_masked != 0 {
+            let dsp_set = dsp | (1 << 15);
+            self.set_mem(DISPLAY_STATUS_REGISTER, dsp_set);
+
+            Some(self.mem(DISPLAY_DATA_REGISTER).to_be_bytes()[0])
+        } else {
+            None
+        }
+    }
 }
 
 /// Populates the processor from a binary provider.
