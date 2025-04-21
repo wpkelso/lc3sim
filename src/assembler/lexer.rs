@@ -169,6 +169,17 @@ fn translate_to_machine_code(operation: &Op, chain: &[Token]) -> (u8, Vec<LC3Wor
             ALL_JUMP_OPCODES[0],
             vec![check_reg(token.next().unwrap(), 6).unwrap()],
         ),
+        Op::JSR => (
+            JSR_OPCODE,
+            vec![
+                0b100000000000,
+                check_offset(token.next().unwrap(), 0, 11).unwrap(),
+            ],
+        ),
+        Op::JSRR => (
+            JSR_OPCODE,
+            vec![check_reg(token.next().unwrap(), 6).unwrap()],
+        ),
         Op::RET => (RET_OPCODE, vec![0b111000000]),
         Op::RTI => (RTI_OPCODE, vec![0b0]),
 
@@ -376,7 +387,7 @@ mod test {
     }
 
     #[test]
-    fn lex_return_instr() {
+    fn lex_return_instrs() {
         let test_vec = vec![Token::INSTR(Op::RET)];
         let (label, instr) = lexer(&test_vec);
 
@@ -388,5 +399,26 @@ mod test {
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1000000000000000);
+    }
+
+    #[test]
+    fn lex_jump_instrs() {
+        let test_vec = vec![Token::INSTR(Op::JMP), Token::REGISTER(RegAddr::Two)];
+        let (label, instr) = lexer(&test_vec);
+
+        assert_eq!(label, None);
+        assert_eq!(instr.unwrap().first().unwrap().value, 0b1100000010000000);
+
+        let test_vec = vec![Token::INSTR(Op::JSR), Token::NUM(63)];
+        let (label, instr) = lexer(&test_vec);
+
+        assert_eq!(label, None);
+        assert_eq!(instr.unwrap().first().unwrap().value, 0b0100100000111111);
+
+        let test_vec = vec![Token::INSTR(Op::JSRR), Token::REGISTER(RegAddr::Three)];
+        let (label, instr) = lexer(&test_vec);
+
+        assert_eq!(label, None);
+        assert_eq!(instr.unwrap().first().unwrap().value, 0b0100000011000000);
     }
 }
