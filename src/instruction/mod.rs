@@ -9,6 +9,8 @@ pub(crate) use iadd::ADD_OPCODE;
 pub(crate) use iand::AND_OPCODE;
 pub(crate) use ibranch::BRANCH_OPCODE;
 pub(crate) use ijump::ALL_JUMP_OPCODES;
+pub(crate) use ijump::RET_OPCODE;
+pub(crate) use ijump::RTI_OPCODE;
 pub(crate) use ijumpsr::JSR_OPCODE;
 pub(crate) use iload::ALL_LOAD_OPCODES;
 pub(crate) use inot::NOT_OPCODE;

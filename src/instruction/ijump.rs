@@ -14,8 +14,9 @@ pub enum IJump {
     InterRet,
 }
 pub const JMP_OPCODE: u8 = 0b1100;
+pub const RET_OPCODE: u8 = 0b1100;
 pub const RTI_OPCODE: u8 = 0b1000;
-pub const ALL_JUMP_OPCODES: [u8; 2] = [JMP_OPCODE, RTI_OPCODE];
+pub const ALL_JUMP_OPCODES: [u8; 3] = [JMP_OPCODE, RTI_OPCODE, RET_OPCODE];
 
 impl Instruction for IJump {
     fn execute<P: LC3>(self, processor: &mut P) -> Result<(), InstructionErr> {

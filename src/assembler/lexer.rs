@@ -1,7 +1,10 @@
 use crate::{
     assembler::{MaybeUnresolvedInstr, Op, PseudoOp, Token},
     defs::{LC3Word, RegAddr},
-    instruction::{ADD_OPCODE, AND_OPCODE, ALL_JUMP_OPCODES, BRANCH_OPCODE, JSR_OPCODE, ALL_LOAD_OPCODES, ALL_STORE_OPCODES, TRAP_OPCODE, NOT_OPCODE},
+    instruction::{
+        ADD_OPCODE, ALL_JUMP_OPCODES, ALL_LOAD_OPCODES, ALL_STORE_OPCODES, AND_OPCODE,
+        BRANCH_OPCODE, JSR_OPCODE, NOT_OPCODE, RET_OPCODE, RTI_OPCODE, TRAP_OPCODE,
+    },
 };
 use anyhow::{bail, Result};
 
@@ -22,6 +25,157 @@ pub fn prefix_label_pass(token_chain: &[Token]) -> (Option<&str>, &[Token]) {
     }
 }
 
+/// Validate whether the given token is a register, and overlay it onto the given machine instruction
+fn check_reg(token: &Token, shift: usize) -> Result<LC3Word, anyhow::Error> {
+    let mut value: LC3Word = 0b0;
+    if let Token::REGISTER(reg) = token {
+        value |= LC3Word::from(*reg) << shift;
+    } else {
+        bail!("NOT REG")
+    }
+
+    Ok(value)
+}
+
+/// Validate whether the given token is an offset, and overlay it onto the given machine instruction
+fn check_offset(token: &Token, shift: u8, max_len: u8) -> Result<LC3Word, anyhow::Error> {
+    let mut value: LC3Word = 0b0;
+
+    if let Token::NUM(num) = token {
+        let max_mask = 1 << (max_len + 1);
+        if *num < max_mask {
+            value |= num << shift;
+        } else {
+            bail!("TOO BIG")
+        }
+    } else if let Token::STRING(label) = token {
+        /*instr.bindings.push((label.clone(), shift + max_len, shift));*/
+    } else {
+        bail!("NOT OFFSET")
+    }
+
+    Ok(value)
+}
+
+/// Validate whether the given token is an offset OR a register, and overlay it on the given machine instruction
+fn check_reg_or_offset(
+    token: &Token,
+    shift: u8,
+    max_offset_len: u8,
+) -> Result<LC3Word, anyhow::Error> {
+    let mut value: LC3Word = 0b0;
+
+    if let Token::REGISTER(reg) = token {
+        value |= LC3Word::from(*reg) << shift;
+    } else if let Token::NUM(num) = token {
+        let max_mask = 1 << (max_offset_len + 1);
+        if *num < max_mask {
+            value |= num << shift;
+            value |= 1 << max_offset_len;
+        } else {
+            bail!("TOO BIG")
+        }
+    } else if let Token::STRING(label) = token {
+        /*instr
+        .bindings
+        .push((label.clone(), shift + max_offset_len, shift));*/
+    } else {
+        bail!("NOT REG OR OFFSET")
+    }
+
+    Ok(value)
+}
+
+fn translate_to_machine_code(operation: &Op, chain: &[Token]) -> (u8, Vec<LC3Word>) {
+    let mut token = chain[1..].iter();
+
+    match operation {
+        Op::ADD => (
+            ADD_OPCODE,
+            vec![
+                check_reg(token.next().unwrap(), 9).unwrap(),
+                check_reg(token.next().unwrap(), 6).unwrap(),
+                check_reg_or_offset(token.next().unwrap(), 0, 5).unwrap(),
+            ],
+        ),
+        Op::AND => (
+            AND_OPCODE,
+            vec![
+                check_reg(token.next().unwrap(), 9).unwrap(),
+                check_reg(token.next().unwrap(), 6).unwrap(),
+                check_reg_or_offset(token.next().unwrap(), 0, 5).unwrap(),
+            ],
+        ),
+        Op::LD => (
+            ALL_LOAD_OPCODES[0],
+            vec![
+                check_reg(token.next().unwrap(), 9).unwrap(),
+                check_offset(token.next().unwrap(), 0, 9).unwrap(),
+            ],
+        ),
+        Op::LDI => (
+            ALL_LOAD_OPCODES[1],
+            vec![
+                check_reg(token.next().unwrap(), 9).unwrap(),
+                check_offset(token.next().unwrap(), 0, 9).unwrap(),
+            ],
+        ),
+        Op::LDR => (
+            ALL_LOAD_OPCODES[2],
+            vec![
+                check_reg(token.next().unwrap(), 9).unwrap(),
+                check_reg(token.next().unwrap(), 6).unwrap(),
+                check_offset(token.next().unwrap(), 0, 6).unwrap(),
+            ],
+        ),
+        Op::LEA => (
+            ALL_LOAD_OPCODES[3],
+            vec![
+                check_reg(token.next().unwrap(), 9).unwrap(),
+                check_offset(token.next().unwrap(), 0, 9).unwrap(),
+            ],
+        ),
+        Op::ST => (
+            ALL_STORE_OPCODES[0],
+            vec![
+                check_reg(token.next().unwrap(), 9).unwrap(),
+                check_offset(token.next().unwrap(), 0, 9).unwrap(),
+            ],
+        ),
+        Op::STI => (
+            ALL_STORE_OPCODES[1],
+            vec![
+                check_reg(token.next().unwrap(), 9).unwrap(),
+                check_offset(token.next().unwrap(), 0, 9).unwrap(),
+            ],
+        ),
+        Op::STR => (
+            ALL_STORE_OPCODES[2],
+            vec![
+                check_reg(token.next().unwrap(), 9).unwrap(),
+                check_reg(token.next().unwrap(), 6).unwrap(),
+                check_offset(token.next().unwrap(), 0, 6).unwrap(),
+            ],
+        ),
+        Op::NOT => (
+            NOT_OPCODE,
+            vec![
+                check_reg(token.next().unwrap(), 9).unwrap(),
+                check_reg(token.next().unwrap(), 6).unwrap(),
+                0b111111,
+            ],
+        ),
+        Op::JMP => (
+            ALL_JUMP_OPCODES[0],
+            vec![check_reg(token.next().unwrap(), 6).unwrap()],
+        ),
+        Op::RET => (RET_OPCODE, vec![0b111000000]),
+        Op::RTI => (RTI_OPCODE, vec![0b0]),
+
+        _ => todo!(),
+    }
+}
+
 /// Second stage of the lexer operation, where a chain of unresolved instructions is created from
 /// the asm op. If the line consists only of a comment, then an empty Vec is returned
 #[inline]
@@ -31,117 +185,15 @@ pub fn construct_instruction_pass(token_chain: &[Token]) -> Result<Vec<MaybeUnre
     let operation = &token_chain[0];
 
     if let Token::INSTR(op) = operation {
-        fn check_reg<const SHIFT: usize>(
-            token: &Token,
-            instr: &mut MaybeUnresolvedInstr,
-        ) -> Result<(), anyhow::Error> {
-            if let Token::REGISTER(reg) = token {
-                instr.value |= (LC3Word::from(*reg) << SHIFT);
-                Ok(())
-            } else {
-                bail!("NOT REG")
-            }
-        }
-
-        fn check_offset<const SHIFT: u8, const MAX_LEN: u8>(
-            token: &Token,
-            instr: &mut MaybeUnresolvedInstr,
-        ) -> Result<(), anyhow::Error> {
-            if let Token::NUM(num) = token {
-                let max_mask = const { 1 << (MAX_LEN + 1) };
-                if *num < max_mask {
-                    instr.value |= num << SHIFT;
-                    Ok(())
-                } else {
-                    bail!("TOO BIG")
-                }
-            } else if let Token::STRING(label) = token {
-                instr
-                    .bindings
-                    .push((label.clone(), const { SHIFT + MAX_LEN }, SHIFT));
-                Ok(())
-            } else {
-                bail!("NOT OFFSET")
-            }
-        }
-
-        fn check_reg_or_offset<const SHIFT: u8, const MAX_OFFSET_LEN: u8>(
-            token: &Token,
-            instr: &mut MaybeUnresolvedInstr,
-        ) -> Result<(), anyhow::Error> {
-            if let Token::REGISTER(reg) = token {
-                instr.value |= (LC3Word::from(*reg) << SHIFT);
-                Ok(())
-            } else if let Token::NUM(num) = token {
-                let max_mask = const { 1 << (MAX_OFFSET_LEN + 1) };
-                if *num < max_mask {
-                    instr.value |= num << SHIFT;
-                    instr.value |= 1 << MAX_OFFSET_LEN;
-                    Ok(())
-                } else {
-                    bail!("TOO BIG")
-                }
-            } else if let Token::STRING(label) = token {
-                instr
-                    .bindings
-                    .push((label.clone(), const { SHIFT + MAX_OFFSET_LEN }, SHIFT));
-                Ok(())
-            } else {
-                bail!("NOT REG OR OFFSET")
-            }
-        }
-
-        let (opcode, sequence) = match op {
-            Op::ADD => (
-                ADD_OPCODE,
-                [check_reg::<9>, check_reg::<6>, check_reg_or_offset::<0, 5>].as_slice(),
-            ),
-            Op::AND => (
-                AND_OPCODE, 
-                [check_reg::<9>, check_reg::<6>, check_reg_or_offset::<0, 5>].as_slice()),
-            Op::LD => (
-                ALL_LOAD_OPCODES[0], 
-                [check_reg::<9>, check_offset::<0, 9>].as_slice()
-            ),
-            Op::LDI => (
-                ALL_LOAD_OPCODES[1], 
-                [check_reg::<9>, check_offset::<0, 9>].as_slice()
-            ),
-            Op::LDR => (
-                ALL_LOAD_OPCODES[2], 
-                [check_reg::<9>, check_reg::<6>, check_offset::<0, 6>].as_slice()
-            ),
-            Op::LEA => (
-                ALL_LOAD_OPCODES[3], 
-                [check_reg::<9>, check_offset::<0, 9>].as_slice()
-            ),
-            Op::ST => (
-                ALL_STORE_OPCODES[0], 
-                [check_reg::<9>, check_offset::<0, 9>].as_slice()
-            ),
-            Op::STI => (
-                ALL_STORE_OPCODES[1], 
-                [check_reg::<9>, check_offset::<0, 9>].as_slice()
-            ),
-            Op::STR => (
-                ALL_STORE_OPCODES[2], 
-                [check_reg::<9>, check_reg::<6>, check_offset::<0, 6>].as_slice()
-            ),
-            Op::NOT => (
-                NOT_OPCODE,
-                [check_reg::<9>, check_reg::<6>].as_slice()
-            ),
-            _ => todo!(),
-        };
+        let (opcode, values) = translate_to_machine_code(op, token_chain);
 
         let mut instr = MaybeUnresolvedInstr {
-            // Shift opcode to start
             value: (opcode as LC3Word) << 12,
             bindings: Vec::new(),
         };
 
-        for (process, token) in sequence.iter().zip(&token_chain[1..]) {
-            process(token, &mut instr)?;
+        for val in values {
+            instr.value |= val;
         }
 
         result.push(instr);
@@ -187,7 +239,7 @@ mod test {
             Token::INSTR(Op::AND),
             Token::REGISTER(RegAddr::Zero),
             Token::REGISTER(RegAddr::One),
-            Token::REGISTER(RegAddr::Zero)
+            Token::REGISTER(RegAddr::Zero),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -198,7 +250,7 @@ mod test {
             Token::INSTR(Op::AND),
             Token::REGISTER(RegAddr::Three),
             Token::REGISTER(RegAddr::One),
-            Token::NUM(0b10011)
+            Token::NUM(0b10011),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -213,7 +265,7 @@ mod test {
             Token::INSTR(Op::ADD),
             Token::REGISTER(RegAddr::Zero),
             Token::REGISTER(RegAddr::One),
-            Token::REGISTER(RegAddr::Zero)
+            Token::REGISTER(RegAddr::Zero),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -224,7 +276,7 @@ mod test {
             Token::INSTR(Op::ADD),
             Token::REGISTER(RegAddr::Three),
             Token::REGISTER(RegAddr::One),
-            Token::NUM(0b10011)
+            Token::NUM(0b10011),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -237,7 +289,7 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LD),
             Token::REGISTER(RegAddr::Five),
-            Token::NUM(0b000111000)
+            Token::NUM(0b000111000),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -247,7 +299,7 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LDI),
             Token::REGISTER(RegAddr::Five),
-            Token::NUM(0b000111000)
+            Token::NUM(0b000111000),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -258,7 +310,7 @@ mod test {
             Token::INSTR(Op::LDR),
             Token::REGISTER(RegAddr::Five),
             Token::REGISTER(RegAddr::Two),
-            Token::NUM(0b111000)
+            Token::NUM(0b111000),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -268,7 +320,7 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LEA),
             Token::REGISTER(RegAddr::Five),
-            Token::NUM(0b000111000)
+            Token::NUM(0b000111000),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -281,7 +333,7 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::ST),
             Token::REGISTER(RegAddr::Five),
-            Token::NUM(0b000111000)
+            Token::NUM(0b000111000),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -291,7 +343,7 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::STI),
             Token::REGISTER(RegAddr::Five),
-            Token::NUM(0b000111000)
+            Token::NUM(0b000111000),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -302,7 +354,7 @@ mod test {
             Token::INSTR(Op::STR),
             Token::REGISTER(RegAddr::Five),
             Token::REGISTER(RegAddr::Two),
-            Token::NUM(0b111000)
+            Token::NUM(0b111000),
         ];
         let (label, instr) = lexer(&test_vec);
 
@@ -320,8 +372,21 @@ mod test {
         let (label, instr) = lexer(&test_vec);
 
         assert_eq!(label, None);
-        // This is the value that should be produced. Currently this fails, as there is no way to
-        // insert arbitrary bits into instructions when forming them.
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1001101000111111);
+    }
+
+    #[test]
+    fn lex_return_instr() {
+        let test_vec = vec![Token::INSTR(Op::RET)];
+        let (label, instr) = lexer(&test_vec);
+
+        assert_eq!(label, None);
+        assert_eq!(instr.unwrap().first().unwrap().value, 0b1100000111000000);
+
+        let test_vec = vec![Token::INSTR(Op::RTI)];
+        let (label, instr) = lexer(&test_vec);
+
+        assert_eq!(label, None);
+        assert_eq!(instr.unwrap().first().unwrap().value, 0b1000000000000000);
     }
 }
