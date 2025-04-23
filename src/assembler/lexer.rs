@@ -1,10 +1,6 @@
 use crate::{
     assembler::{MaybeUnresolvedInstr, Op, PseudoOp, Token},
     defs::{LC3Word, RegAddr},
-    instruction::{
-        ADD_OPCODE, ALL_JUMP_OPCODES, ALL_LOAD_OPCODES, ALL_STORE_OPCODES, AND_OPCODE,
-        BRANCH_OPCODE, JSR_OPCODE, NOT_OPCODE, RET_OPCODE, RTI_OPCODE, TRAP_OPCODE,
-    },
 };
 use anyhow::{bail, Result};
 
@@ -13,212 +9,33 @@ use anyhow::{bail, Result};
 
 /// First stage of the lexer operation, where any prefix labels are stripped out
 #[inline]
-pub fn prefix_label_pass(token_chain: &[Token]) -> (Option<&str>, &[Token]) {
+pub fn prefix_label_pass(token_chain: Vec<Token>) -> (Option<String>, Vec<Token>) {
     if token_chain[0].is_string() {
-        let label_str: &str = match &token_chain[0] {
-            Token::STRING(label) => label.as_str(),
+        let label_str: String = match token_chain[0].clone() {
+            Token::STRING(label) => label,
             _ => panic!("This shouldn't happen"),
         };
-        (Some(label_str), &token_chain[1..])
+
+        let (_, token_chain) = token_chain.split_at(1);
+        (Some(label_str), Vec::from(token_chain))
     } else {
         (None, token_chain)
-    }
-}
-
-/// Validate whether the given token is a register, and overlay it onto the given machine instruction
-fn check_reg(token: &Token, shift: usize) -> Result<LC3Word, anyhow::Error> {
-    let mut value: LC3Word = 0b0;
-    if let Token::REGISTER(reg) = token {
-        value |= LC3Word::from(*reg) << shift;
-    } else {
-        bail!("NOT REG")
-    }
-
-    Ok(value)
-}
-
-/// Validate whether the given token is an offset, and overlay it onto the given machine instruction
-fn check_offset(token: &Token, shift: u8, max_len: u8) -> Result<LC3Word, anyhow::Error> {
-    let mut value: LC3Word = 0b0;
-
-    if let Token::NUM(num) = token {
-        let max_mask = 1 << (max_len + 1);
-        if *num < max_mask {
-            value |= num << shift;
-        } else {
-            bail!("TOO BIG")
-        }
-    } else if let Token::STRING(label) = token {
-        /*instr.bindings.push((label.clone(), shift + max_len, shift));*/
-    } else {
-        bail!("NOT OFFSET")
-    }
-
-    Ok(value)
-}
-
-/// Validate whether the given token is an offset OR a register, and overlay it on the given machine instruction
-fn check_reg_or_offset(
-    token: &Token,
-    shift: u8,
-    max_offset_len: u8,
-) -> Result<LC3Word, anyhow::Error> {
-    let mut value: LC3Word = 0b0;
-
-    if let Token::REGISTER(reg) = token {
-        value |= LC3Word::from(*reg) << shift;
-    } else if let Token::NUM(num) = token {
-        let max_mask = 1 << (max_offset_len + 1);
-        if *num < max_mask {
-            value |= num << shift;
-            value |= 1 << max_offset_len;
-        } else {
-            bail!("TOO BIG")
-        }
-    } else if let Token::STRING(label) = token {
-        /*instr
-        .bindings
-        .push((label.clone(), shift + max_offset_len, shift));*/
-    } else {
-        bail!("NOT REG OR OFFSET")
-    }
-
-    Ok(value)
-}
-
-fn translate_to_machine_code(operation: &Op, chain: &[Token]) -> (u8, Vec<LC3Word>) {
-    let mut token = chain[1..].iter();
-
-    match operation {
-        Op::ADD => (
-            ADD_OPCODE,
-            vec![
-                check_reg(token.next().unwrap(), 9).unwrap(),
-                check_reg(token.next().unwrap(), 6).unwrap(),
-                check_reg_or_offset(token.next().unwrap(), 0, 5).unwrap(),
-            ],
-        ),
-        Op::AND => (
-            AND_OPCODE,
-            vec![
-                check_reg(token.next().unwrap(), 9).unwrap(),
-                check_reg(token.next().unwrap(), 6).unwrap(),
-                check_reg_or_offset(token.next().unwrap(), 0, 5).unwrap(),
-            ],
-        ),
-        Op::LD => (
-            ALL_LOAD_OPCODES[0],
-            vec![
-                check_reg(token.next().unwrap(), 9).unwrap(),
-                check_offset(token.next().unwrap(), 0, 9).unwrap(),
-            ],
-        ),
-        Op::LDI => (
-            ALL_LOAD_OPCODES[1],
-            vec![
-                check_reg(token.next().unwrap(), 9).unwrap(),
-                check_offset(token.next().unwrap(), 0, 9).unwrap(),
-            ],
-        ),
-        Op::LDR => (
-            ALL_LOAD_OPCODES[2],
-            vec![
-                check_reg(token.next().unwrap(), 9).unwrap(),
-                check_reg(token.next().unwrap(), 6).unwrap(),
-                check_offset(token.next().unwrap(), 0, 6).unwrap(),
-            ],
-        ),
-        Op::LEA => (
-            ALL_LOAD_OPCODES[3],
-            vec![
-                check_reg(token.next().unwrap(), 9).unwrap(),
-                check_offset(token.next().unwrap(), 0, 9).unwrap(),
-            ],
-        ),
-        Op::ST => (
-            ALL_STORE_OPCODES[0],
-            vec![
-                check_reg(token.next().unwrap(), 9).unwrap(),
-                check_offset(token.next().unwrap(), 0, 9).unwrap(),
-            ],
-        ),
-        Op::STI => (
-            ALL_STORE_OPCODES[1],
-            vec![
-                check_reg(token.next().unwrap(), 9).unwrap(),
-                check_offset(token.next().unwrap(), 0, 9).unwrap(),
-            ],
-        ),
-        Op::STR => (
-            ALL_STORE_OPCODES[2],
-            vec![
-                check_reg(token.next().unwrap(), 9).unwrap(),
-                check_reg(token.next().unwrap(), 6).unwrap(),
-                check_offset(token.next().unwrap(), 0, 6).unwrap(),
-            ],
-        ),
-        Op::NOT => (
-            NOT_OPCODE,
-            vec![
-                check_reg(token.next().unwrap(), 9).unwrap(),
-                check_reg(token.next().unwrap(), 6).unwrap(),
-                0b111111,
-            ],
-        ),
-        Op::JMP => (
-            ALL_JUMP_OPCODES[0],
-            vec![check_reg(token.next().unwrap(), 6).unwrap()],
-        ),
-        Op::JSR => (
-            JSR_OPCODE,
-            vec![
-                0b100000000000,
-                check_offset(token.next().unwrap(), 0, 11).unwrap(),
-            ],
-        ),
-        Op::JSRR => (
-            JSR_OPCODE,
-            vec![check_reg(token.next().unwrap(), 6).unwrap()],
-        ),
-        Op::RET => (RET_OPCODE, vec![0b111000000]),
-        Op::RTI => (RTI_OPCODE, vec![0b0]),
-
-        _ => todo!(),
     }
 }
 
 /// Second stage of the lexer operation, where a chain of unresolved instructions is created from
 /// the asm op. If the line consists only of a comment, then an empty Vec is returned
 #[inline]
-pub fn construct_instruction_pass(token_chain: &[Token]) -> Result<Vec<MaybeUnresolvedInstr>> {
+pub fn construct_instruction_pass(token_chain: Vec<Token>) -> Result<Vec<MaybeUnresolvedInstr>> {
     let mut result: Vec<MaybeUnresolvedInstr> = Vec::new();
 
-    let operation = &token_chain[0];
-
-    if let Token::INSTR(op) = operation {
-        let (opcode, values) = translate_to_machine_code(op, token_chain);
-
-        let mut instr = MaybeUnresolvedInstr {
-            value: (opcode as LC3Word) << 12,
-            bindings: Vec::new(),
-        };
-
-        for val in values {
-            instr.value |= val;
-        }
-
-        result.push(instr);
-    } else if operation.is_meta() {
-        todo!()
-    } else if !operation.is_comment() {
-        bail!("Line is invalid, does not start with an instruction!")
-    }
+    result.push(MaybeUnresolvedInstr::new_from_chain(token_chain));
 
     Ok(result)
 }
 
 /// Wrapper function to provide a cleaner API for the lexing passes
-pub fn lexer(token_chain: &[Token]) -> (Option<&str>, Result<Vec<MaybeUnresolvedInstr>>) {
+pub fn lexer(token_chain: Vec<Token>) -> (Option<String>, Result<Vec<MaybeUnresolvedInstr>>) {
     let (label, chain) = prefix_label_pass(token_chain);
     let result = construct_instruction_pass(chain);
 
@@ -237,7 +54,7 @@ mod test {
             Token::STRING("LABEL1".to_string()),
             Token::INSTR(Op::ILLEGAL),
         ];
-        let (label, instr) = prefix_label_pass(&test_vec);
+        let (label, instr) = prefix_label_pass(test_vec);
 
         assert_eq!(label.unwrap(), "LABEL1");
         assert_eq!(instr[0], Token::INSTR(Op::ILLEGAL));
@@ -249,10 +66,13 @@ mod test {
             Token::STRING("LABEL1".to_string()),
             Token::INSTR(Op::AND),
             Token::REGISTER(RegAddr::Zero),
+            Token::COMMA,
             Token::REGISTER(RegAddr::One),
+            Token::COMMA,
             Token::REGISTER(RegAddr::Zero),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label.unwrap(), "LABEL1");
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0101000001000000);
@@ -260,10 +80,13 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::AND),
             Token::REGISTER(RegAddr::Three),
+            Token::COMMA,
             Token::REGISTER(RegAddr::One),
+            Token::COMMA,
             Token::NUM(0b10011),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0101011001110011);
@@ -275,10 +98,13 @@ mod test {
             Token::STRING("LABEL1".to_string()),
             Token::INSTR(Op::ADD),
             Token::REGISTER(RegAddr::Zero),
+            Token::COMMA,
             Token::REGISTER(RegAddr::One),
+            Token::COMMA,
             Token::REGISTER(RegAddr::Zero),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label.unwrap(), "LABEL1");
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0001000001000000);
@@ -286,10 +112,13 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::ADD),
             Token::REGISTER(RegAddr::Three),
+            Token::COMMA,
             Token::REGISTER(RegAddr::One),
+            Token::COMMA,
             Token::NUM(0b10011),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0001011001110011);
@@ -300,9 +129,11 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LD),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::NUM(0b000111000),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0010101000111000);
@@ -310,9 +141,11 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LDI),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::NUM(0b000111000),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1010101000111000);
@@ -320,10 +153,13 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LDR),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::REGISTER(RegAddr::Two),
+            Token::COMMA,
             Token::NUM(0b111000),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0110101010111000);
@@ -331,9 +167,11 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::LEA),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::NUM(0b000111000),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1110101000111000);
@@ -344,9 +182,11 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::ST),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::NUM(0b000111000),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0011101000111000);
@@ -354,9 +194,11 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::STI),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::NUM(0b000111000),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1011101000111000);
@@ -364,10 +206,13 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::STR),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::REGISTER(RegAddr::Two),
+            Token::COMMA,
             Token::NUM(0b111000),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0111101010111000);
@@ -378,9 +223,11 @@ mod test {
         let test_vec = vec![
             Token::INSTR(Op::NOT),
             Token::REGISTER(RegAddr::Five),
+            Token::COMMA,
             Token::REGISTER(RegAddr::Zero),
+            Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(&test_vec);
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1001101000111111);
@@ -388,14 +235,14 @@ mod test {
 
     #[test]
     fn lex_return_instrs() {
-        let test_vec = vec![Token::INSTR(Op::RET)];
-        let (label, instr) = lexer(&test_vec);
+        let test_vec = vec![Token::INSTR(Op::RET), Token::SEMICOLON];
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1100000111000000);
 
-        let test_vec = vec![Token::INSTR(Op::RTI)];
-        let (label, instr) = lexer(&test_vec);
+        let test_vec = vec![Token::INSTR(Op::RTI), Token::SEMICOLON];
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1000000000000000);
@@ -403,20 +250,28 @@ mod test {
 
     #[test]
     fn lex_jump_instrs() {
-        let test_vec = vec![Token::INSTR(Op::JMP), Token::REGISTER(RegAddr::Two)];
-        let (label, instr) = lexer(&test_vec);
+        let test_vec = vec![
+            Token::INSTR(Op::JMP),
+            Token::REGISTER(RegAddr::Two),
+            Token::SEMICOLON,
+        ];
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1100000010000000);
 
-        let test_vec = vec![Token::INSTR(Op::JSR), Token::NUM(63)];
-        let (label, instr) = lexer(&test_vec);
+        let test_vec = vec![Token::INSTR(Op::JSR), Token::NUM(63), Token::SEMICOLON];
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0100100000111111);
 
-        let test_vec = vec![Token::INSTR(Op::JSRR), Token::REGISTER(RegAddr::Three)];
-        let (label, instr) = lexer(&test_vec);
+        let test_vec = vec![
+            Token::INSTR(Op::JSRR),
+            Token::REGISTER(RegAddr::Three),
+            Token::SEMICOLON,
+        ];
+        let (label, instr) = lexer(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0100000011000000);
