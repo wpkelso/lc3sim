@@ -1,8 +1,8 @@
 use crate::{
     defs::{LC3Word, Op, PseudoOp, RegAddr},
     instruction::{
-        ADD_OPCODE, ALL_JUMP_OPCODES, ALL_LOAD_OPCODES, ALL_STORE_OPCODES, AND_OPCODE, JSR_OPCODE,
-        NOT_OPCODE,
+        ADD_OPCODE, ALL_JUMP_OPCODES, ALL_LOAD_OPCODES, ALL_STORE_OPCODES, AND_OPCODE,
+        BRANCH_OPCODE, JSR_OPCODE, NOT_OPCODE,
     },
 };
 use anyhow::{bail, Result};
@@ -66,6 +66,7 @@ impl ExpectItem {
 
 impl Op {
     fn get_sequence(&self) -> Vec<ExpectItem> {
+        // FIXME: Allocating this every time this function is run is incredibly inefficient
         let add_sequence = vec![
             ExpectItem::Code(ADD_OPCODE),
             ExpectItem::Reg(9),
@@ -178,6 +179,7 @@ impl Op {
 
         let rti_sequence = vec![ExpectItem::Code(ALL_JUMP_OPCODES[1]), ExpectItem::Semicolon];
 
+        // Actually do the work here
         match self {
             Op::ADD => add_sequence,
             Op::AND => and_sequence,
@@ -194,12 +196,25 @@ impl Op {
             Op::JSRR => jsrr_sequence,
             Op::RET => ret_sequence,
             Op::RTI => rti_sequence,
+            // This is defined here so we can use the flags from the token
+            Op::BR(n, z, p) => {
+                let br_sequence = vec![
+                    ExpectItem::Code(BRANCH_OPCODE),
+                    ExpectItem::Bits((*n as u16) << 11),
+                    ExpectItem::Bits((*z as u16) << 10),
+                    ExpectItem::Bits((*p as u16) << 9),
+                    ExpectItem::Offset(0, 9),
+                    ExpectItem::Semicolon,
+                ];
+                br_sequence
+            }
             _ => todo!(),
         }
     }
 }
 
 impl MaybeUnresolvedInstr {
+    /// Return a new MaybeUnresolvedInstr given a chain of Tokens
     fn new_from_chain(mut chain: Vec<Token>) -> MaybeUnresolvedInstr {
         if let Token::INSTR(op) = chain[0] {
             let sequence = op.get_sequence();
@@ -237,7 +252,7 @@ impl MaybeUnresolvedInstr {
 
             instr.flatten_values(values);
 
-            return instr;
+            instr
         } else {
             todo!()
         }

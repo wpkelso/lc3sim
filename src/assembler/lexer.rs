@@ -2,7 +2,7 @@ use crate::{
     assembler::{MaybeUnresolvedInstr, Op, PseudoOp, Token},
     defs::{LC3Word, RegAddr},
 };
-use anyhow::{bail, Result};
+use anyhow::Result;
 
 // All of these functions are inlined because they work on the same exact data but are split up for
 // legibility
@@ -275,5 +275,48 @@ mod test {
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0100000011000000);
+    }
+
+    #[test]
+    fn lex_branch_instrs() {
+        let test_vec = vec![
+            Token::INSTR(Op::BR(true, false, false)),
+            Token::NUM(0xFF),
+            Token::SEMICOLON,
+        ];
+        let (label, instr) = lexer(test_vec);
+
+        assert_eq!(label, None);
+        assert_eq!(instr.unwrap().first().unwrap().value, 0b0000100011111111);
+
+        let test_vec = vec![
+            Token::INSTR(Op::BR(false, true, false)),
+            Token::NUM(0xFF),
+            Token::SEMICOLON,
+        ];
+        let (label, instr) = lexer(test_vec);
+
+        assert_eq!(label, None);
+        assert_eq!(instr.unwrap().first().unwrap().value, 0b0000010011111111);
+
+        let test_vec = vec![
+            Token::INSTR(Op::BR(false, false, true)),
+            Token::NUM(0xFF),
+            Token::SEMICOLON,
+        ];
+        let (label, instr) = lexer(test_vec);
+
+        assert_eq!(label, None);
+        assert_eq!(instr.unwrap().first().unwrap().value, 0b0000001011111111);
+
+        let test_vec = vec![
+            Token::INSTR(Op::BR(true, false, true)),
+            Token::NUM(0xFF),
+            Token::SEMICOLON,
+        ];
+        let (label, instr) = lexer(test_vec);
+
+        assert_eq!(label, None);
+        assert_eq!(instr.unwrap().first().unwrap().value, 0b0000101011111111);
     }
 }
