@@ -14,9 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    environment:
-      name: ${{ github.ref_name != 'main' && 'testing' || 'unrestricted' }}
-
     steps:
     - uses: actions/checkout@v4
       with:
@@ -66,9 +63,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    environment:
-      name: ${{ github.ref_name != 'main' && 'testing' || 'unrestricted' }}
-
     steps:
     - uses: actions/checkout@v4
 
@@ -89,9 +83,6 @@ jobs:
   msrv:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
-    environment:
-      name: ${{ github.ref_name != 'main' && 'testing' || 'unrestricted' }}
 
     steps:
     - uses: actions/checkout@v4
@@ -121,9 +112,6 @@ jobs:
             triple: aarch64-apple-darwin
     runs-on: ${{ format('{0}-latest', matrix.os) }}
     timeout-minutes: 30
-
-    environment:
-      name: ${{ github.ref_name != 'main' && 'testing' || 'unrestricted' }}
 
     steps:
     - uses: actions/checkout@v4
