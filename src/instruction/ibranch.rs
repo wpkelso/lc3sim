@@ -7,7 +7,7 @@ use crate::{
     util::{apply_offset, shift_to_signed, shift_to_unsigned},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct IBranch {
     //while br roughly follows the bit assignment of PCoffset9,
     //this is treated as a special case for ease of implementation

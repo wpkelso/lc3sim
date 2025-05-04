@@ -6,7 +6,7 @@ use crate::{
 
 use super::InsufficientPerms;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum IJump {
     Instr(RegAddr),
     PrivClear(RegAddr), // Clears privilege bit

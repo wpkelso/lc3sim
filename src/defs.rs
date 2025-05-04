@@ -4,6 +4,7 @@ use thiserror::Error;
 pub type LC3Word = u16;
 pub type SignedLC3Word = i16;
 pub type LC3MemAddr = u16;
+pub type HalfLC3Word = u8;
 
 /// Size of the memory address space.
 pub const ADDR_SPACE_SIZE: usize = 2_usize.pow(16_u32);
