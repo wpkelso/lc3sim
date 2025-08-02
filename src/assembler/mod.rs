@@ -9,6 +9,7 @@ use anyhow::{bail, Result};
 use strum_macros::EnumDiscriminants;
 
 pub mod lexer;
+pub mod symtable;
 pub mod tokenizer;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
