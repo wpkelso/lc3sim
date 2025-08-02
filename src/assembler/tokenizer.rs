@@ -34,7 +34,7 @@ const INSTR_PATTERN: [&str; 23] = [
 
 const META_PATTERN: [&str; 5] = [r"^.ORIG$", r"^.FILL$", r"^BLKW$", r"^.STRINGZ$", r"^.END$"];
 const NUM_PATTERN: &str = r"^[x|#|b]-?[0-9A-F]*$";
-const REG_PATTERN: &str = r"^R[0-7],?$";
+const REG_PATTERN: &str = r"^R[0-7][,;]?$";
 const COMMENT_PATTERN: &str = r"^;.*$";
 const STRING_PATTERN: &str = r"^[0-9a-zA-Z[:punct:]]+$";
 
@@ -109,51 +109,73 @@ fn match_pseudo_op(target: Vec<usize>) -> Result<PseudoOp> {
 pub fn tokenize(line: &str) -> Result<Vec<Token>> {
     let mut token: Vec<Token> = Vec::new(); // this value is ultimately returned
 
-    if RE_REGISTER.is_match(line) {
-        let reg_num_char: char = line.chars().nth(1).unwrap();
-        let reg_num_int: u8 = reg_num_char.to_digit(10).unwrap() as u8;
-        token.push(Token::REGISTER(RegAddr::try_from(reg_num_int)?));
-        if line.ends_with(',') {
-            token.push(Token::COMMA)
-        }
-        Ok(token)
-    } else if RE_COMMENT.is_match(line) {
-        token.push(Token::COMMENT(line.to_string()));
-        Ok(token)
-    } else if RE_INSTR.is_match(line.as_bytes()) {
-        let matches: Vec<usize> = RE_INSTR.matches(line.as_bytes()).into_iter().collect();
-        token.push(Token::INSTR(match_op(line, matches)?));
-        Ok(token)
-    } else if RE_META.is_match(line.as_bytes()) {
-        let matches: Vec<usize> = RE_META.matches(line.as_bytes()).into_iter().collect();
-        token.push(Token::META(match_pseudo_op(matches)?));
-        Ok(token)
-    } else if RE_NUM.is_match(line) {
-        let num = if line.starts_with('x') {
-            u16::from_str_radix(line.strip_prefix('x').unwrap(), 16).unwrap()
-        } else if line.starts_with('#') {
-            line.strip_prefix('#').unwrap().parse().unwrap()
-        } else {
-            bail!("Found invalid number declaration!")
-        };
-        token.push(Token::NUM(num));
-        Ok(token)
-    } else if RE_STRING.is_match(line.trim_matches('"')) {
-        // Strings and labels are functionally the same but one has quotes.
-        // Therefore they aren't differentiated by token here, and should be dealt with
-        // during lexing
-        let string = line.trim_matches('"').to_string();
-        if line.starts_with('"') {
-            token.push(Token::QUOTES)
-        }
-        token.push(Token::STRING(string));
-        if line.ends_with('"') {
-            token.push(Token::QUOTES)
-        }
-        Ok(token)
+    let trimmed_line = line.trim_ascii();
+    let mut body: String = String::new();
+    let comment: String;
+    if trimmed_line.starts_with(';') {
+        comment = trimmed_line
+            .strip_prefix(";")
+            .unwrap()
+            .trim_ascii()
+            .to_string();
     } else {
-        bail!("Could not match with a token");
+        let mut major_parts = line.split(';');
+        body = major_parts.next().unwrap().to_owned();
+        if line.contains(';') {
+            // If there was a semicolon in the initial line, we assume it was at the end of whatever the first part was
+            body += ";"
+        };
+        comment = major_parts.collect();
     }
+
+    let body = body.split_ascii_whitespace();
+
+    for part in body {
+        if RE_REGISTER.is_match(part) {
+            let reg_num_char: char = part.chars().nth(1).unwrap();
+            let reg_num_int: u8 = reg_num_char.to_digit(10).unwrap() as u8;
+            token.push(Token::REGISTER(RegAddr::try_from(reg_num_int)?));
+            if part.ends_with(',') {
+                token.push(Token::COMMA)
+            } else if part.ends_with(';') {
+                token.push(Token::SEMICOLON)
+            }
+        } else if RE_INSTR.is_match(part.as_bytes()) {
+            let matches: Vec<usize> = RE_INSTR.matches(part.as_bytes()).into_iter().collect();
+            token.push(Token::INSTR(match_op(part, matches)?));
+        } else if RE_META.is_match(part.as_bytes()) {
+            let matches: Vec<usize> = RE_META.matches(part.as_bytes()).into_iter().collect();
+            token.push(Token::META(match_pseudo_op(matches)?));
+        } else if RE_NUM.is_match(part) {
+            let num = if part.starts_with('x') {
+                u16::from_str_radix(part.strip_prefix('x').unwrap(), 16).unwrap()
+            } else if part.starts_with('#') {
+                part.strip_prefix('#').unwrap().parse().unwrap()
+            } else {
+                bail!("Found invalid number declaration!")
+            };
+            token.push(Token::NUM(num));
+        } else if RE_STRING.is_match(part.trim_matches('"')) {
+            // Strings and labels are functionally the same but one has quotes.
+            // Therefore they aren't differentiated by token here, and should be dealt with
+            // during lexing
+            let string = part.trim_matches('"').to_string();
+            if part.starts_with('"') {
+                token.push(Token::QUOTES)
+            }
+            token.push(Token::STRING(string));
+            if part.ends_with('"') {
+                token.push(Token::QUOTES)
+            }
+        } else {
+            bail!("Could not match with a token");
+        }
+    }
+
+    if !comment.is_empty() {
+        token.push(Token::COMMENT(comment));
+    }
+    Ok(token)
 }
 
 #[cfg(test)]
@@ -191,7 +213,7 @@ mod test {
         let result: Vec<Token> = tokenize(test_str).unwrap();
         assert_eq!(
             result[0],
-            Token::COMMENT("; Put return addr in R7".to_string())
+            Token::COMMENT("Put return addr in R7".to_string())
         );
     }
 
@@ -252,5 +274,24 @@ mod test {
         let result: Vec<Token> = tokenize(test_str).unwrap();
         assert_eq!(result[0], Token::STRING("String.".to_string()));
         assert_eq!(result[1], Token::QUOTES);
+    }
+
+    #[test]
+    fn tokenize_labelled_line() {
+        let test_str: &str = "LABEL1 ADD R0, R1, R0;";
+        let result: Vec<Token> = tokenize(test_str).unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::STRING("LABEL1".to_string()),
+                Token::INSTR(Op::ADD),
+                Token::REGISTER(RegAddr::Zero),
+                Token::COMMA,
+                Token::REGISTER(RegAddr::One),
+                Token::COMMA,
+                Token::REGISTER(RegAddr::Zero),
+                Token::SEMICOLON,
+            ]
+        )
     }
 }

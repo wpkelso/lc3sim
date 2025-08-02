@@ -35,7 +35,7 @@ pub fn construct_instruction_pass(token_chain: Vec<Token>) -> Result<Vec<MaybeUn
 }
 
 /// Wrapper function to provide a cleaner API for the lexing passes
-pub fn lexer(token_chain: Vec<Token>) -> (Option<String>, Result<Vec<MaybeUnresolvedInstr>>) {
+pub fn lex(token_chain: Vec<Token>) -> (Option<String>, Result<Vec<MaybeUnresolvedInstr>>) {
     let (label, chain) = prefix_label_pass(token_chain);
     let result = construct_instruction_pass(chain);
 
@@ -72,7 +72,7 @@ mod test {
             Token::REGISTER(RegAddr::Zero),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label.unwrap(), "LABEL1");
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0101000001000000);
@@ -86,7 +86,7 @@ mod test {
             Token::NUM(0b10011),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0101011001110011);
@@ -104,7 +104,7 @@ mod test {
             Token::REGISTER(RegAddr::Zero),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label.unwrap(), "LABEL1");
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0001000001000000);
@@ -118,7 +118,7 @@ mod test {
             Token::NUM(0b10011),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0001011001110011);
@@ -133,7 +133,7 @@ mod test {
             Token::NUM(0b000111000),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0010101000111000);
@@ -145,7 +145,7 @@ mod test {
             Token::NUM(0b000111000),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1010101000111000);
@@ -159,7 +159,7 @@ mod test {
             Token::NUM(0b111000),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0110101010111000);
@@ -171,7 +171,7 @@ mod test {
             Token::NUM(0b000111000),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1110101000111000);
@@ -186,7 +186,7 @@ mod test {
             Token::NUM(0b000111000),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0011101000111000);
@@ -198,7 +198,7 @@ mod test {
             Token::NUM(0b000111000),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1011101000111000);
@@ -212,7 +212,7 @@ mod test {
             Token::NUM(0b111000),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0111101010111000);
@@ -227,7 +227,7 @@ mod test {
             Token::REGISTER(RegAddr::Zero),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1001101000111111);
@@ -236,13 +236,13 @@ mod test {
     #[test]
     fn lex_return_instrs() {
         let test_vec = vec![Token::INSTR(Op::RET), Token::SEMICOLON];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1100000111000000);
 
         let test_vec = vec![Token::INSTR(Op::RTI), Token::SEMICOLON];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1000000000000000);
@@ -255,13 +255,13 @@ mod test {
             Token::REGISTER(RegAddr::Two),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b1100000010000000);
 
         let test_vec = vec![Token::INSTR(Op::JSR), Token::NUM(63), Token::SEMICOLON];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0100100000111111);
@@ -271,7 +271,7 @@ mod test {
             Token::REGISTER(RegAddr::Three),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0100000011000000);
@@ -284,7 +284,7 @@ mod test {
             Token::NUM(0xFF),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0000100011111111);
@@ -294,7 +294,7 @@ mod test {
             Token::NUM(0xFF),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0000010011111111);
@@ -304,7 +304,7 @@ mod test {
             Token::NUM(0xFF),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0000001011111111);
@@ -314,7 +314,7 @@ mod test {
             Token::NUM(0xFF),
             Token::SEMICOLON,
         ];
-        let (label, instr) = lexer(test_vec);
+        let (label, instr) = lex(test_vec);
 
         assert_eq!(label, None);
         assert_eq!(instr.unwrap().first().unwrap().value, 0b0000101011111111);

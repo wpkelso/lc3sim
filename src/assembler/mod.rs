@@ -1,4 +1,6 @@
 use crate::{
+    assembler::lexer::lex,
+    assembler::tokenizer::tokenize,
     defs::{LC3Word, Op, PseudoOp, RegAddr},
     instruction::{
         ADD_OPCODE, ALL_JUMP_OPCODES, ALL_LOAD_OPCODES, ALL_STORE_OPCODES, AND_OPCODE,
@@ -381,10 +383,25 @@ impl Token {
     }
 }
 
-pub fn translate_line(line: &str) -> MaybeUnresolvedInstr {
-    todo!()
+pub fn translate_line(line: &str) -> Vec<MaybeUnresolvedInstr> {
+    let token_step = tokenize(line).unwrap();
+    let (_label, bit_sequence) = lex(token_step);
+    return bit_sequence.unwrap();
 }
 
 pub fn resolve_instr(instr: MaybeUnresolvedInstr) -> String {
     todo!()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn translate_one_line() {
+        let test_line = "LABEL1 ADD R0, R1, R0;";
+        let sequence: Vec<MaybeUnresolvedInstr> = translate_line(test_line);
+
+        assert_eq!(sequence.first().unwrap().value, 0b0001000001000000);
+    }
 }
