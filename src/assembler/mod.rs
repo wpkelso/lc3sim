@@ -404,4 +404,12 @@ mod test {
 
         assert_eq!(sequence.first().unwrap().value, 0b0001000001000000);
     }
+
+    #[test]
+    fn translate_one_line_with_comment() {
+        let test_line = "LABEL1 ADD R0, R1, R0; Hello World";
+        let sequence: Vec<MaybeUnresolvedInstr> = translate_line(test_line);
+
+        assert_eq!(sequence.first().unwrap().value, 0b0001000001000000);
+    }
 }
