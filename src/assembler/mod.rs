@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 use crate::{
     assembler::lexer::lex,
     assembler::tokenizer::tokenize,
-    defs::{LC3Word, Op, PseudoOp, RegAddr},
+    defs::{LC3MemAddr, LC3Word, Op, PseudoOp, RegAddr},
     instruction::{
         ADD_OPCODE, ALL_JUMP_OPCODES, ALL_LOAD_OPCODES, ALL_STORE_OPCODES, AND_OPCODE,
         BRANCH_OPCODE, JSR_OPCODE, NOT_OPCODE,
@@ -11,8 +14,16 @@ use anyhow::{bail, Result};
 use strum_macros::EnumDiscriminants;
 
 pub mod lexer;
-pub mod symtable;
 pub mod tokenizer;
+
+#[derive(Debug, Clone)]
+pub struct AssemblyContext {
+    pub file: PathBuf,
+    pub content: Vec<LC3Word>,
+    pub symtable: HashMap<String, LC3MemAddr>,
+    pub first_addr: LC3MemAddr,
+    pub last_addr: LC3MemAddr,
+}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Binding {
@@ -383,14 +394,49 @@ impl Token {
     }
 }
 
-pub fn translate_line(line: &str) -> Vec<MaybeUnresolvedInstr> {
-    let token_step = tokenize(line).unwrap();
-    let (_label, bit_sequence) = lex(token_step);
-    return bit_sequence.unwrap();
-}
+impl AssemblyContext {
+    fn new(path: String) -> AssemblyContext {
+        AssemblyContext {
+            file: PathBuf::from(path),
+            content: Vec::new(),
+            symtable: HashMap::new(),
+            first_addr: 0x0,
+            last_addr: 0x0,
+        }
+    }
 
-pub fn resolve_instr(instr: MaybeUnresolvedInstr) -> String {
-    todo!()
+    fn translate_line(&mut self, line: &str) -> Vec<MaybeUnresolvedInstr> {
+        let token_step = tokenize(line).unwrap();
+        let (label, sequence) = lex(token_step);
+        match label {
+            Some(l) => {
+                self.symtable.insert(l, self.last_addr);
+            }
+            None => (),
+        }
+        let sequence = sequence.unwrap();
+
+        return sequence;
+    }
+
+    fn resolve_instr(&self, instr: MaybeUnresolvedInstr) -> LC3Word {
+        let mut resolved_instr: LC3Word = instr.value;
+        for binding in instr.bindings {
+            let addr: LC3MemAddr = self.get_addr_for_label(binding.0).unwrap();
+            let offset = binding.2;
+
+            resolved_instr |= addr << offset;
+        }
+
+        return resolved_instr;
+    }
+
+    fn get_addr_for_label(&self, label: String) -> Result<LC3MemAddr> {
+        match self.symtable.get(&label) {
+            Some(val) => Ok(val.clone()),
+            None => bail!("Couldn't find a match for the label."),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -399,16 +445,22 @@ mod test {
 
     #[test]
     fn translate_one_line() {
+        let mut context = AssemblyContext::new(String::from(""));
         let test_line = "LABEL1 ADD R0, R1, R0;";
-        let sequence: Vec<MaybeUnresolvedInstr> = translate_line(test_line);
+        let sequence: Vec<MaybeUnresolvedInstr> = context.translate_line(test_line);
 
+        assert_eq!(
+            context.get_addr_for_label(String::from("LABEL1")).unwrap(),
+            0x0
+        );
         assert_eq!(sequence.first().unwrap().value, 0b0001000001000000);
     }
 
     #[test]
     fn translate_one_line_with_comment() {
+        let mut context = AssemblyContext::new(String::from(""));
         let test_line = "LABEL1 ADD R0, R1, R0; Hello World";
-        let sequence: Vec<MaybeUnresolvedInstr> = translate_line(test_line);
+        let sequence: Vec<MaybeUnresolvedInstr> = context.translate_line(test_line);
 
         assert_eq!(sequence.first().unwrap().value, 0b0001000001000000);
     }
